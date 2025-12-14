@@ -282,15 +282,21 @@
             const processedData = chartData.map(d => {
                 const values = brands.map(brand => ({ brand, value: d[brand] || 0 }));
                 values.sort((a, b) => a.value - b.value);
+                
                 let cumulative = 0;
-                return {
-                    mes: d.mes,
-                    bands: values.map(v => {
-                        const start = cumulative;
-                        cumulative += v.value;
-                        return { brand: v.brand, value: v.value, y0: start, y1: cumulative };
-                    })
-                };
+                const bands = values.map((v, idx) => {
+                    const start = cumulative;
+                    cumulative += v.value;
+                    return { 
+                        brand: v.brand, 
+                        value: v.value,
+                        displayValue: Math.round(v.value),
+                        y0: start, 
+                        y1: cumulative 
+                    };
+                });
+                
+                return { mes: d.mes, bands };
             });
 
             const barWidth = x.bandwidth();
@@ -334,7 +340,7 @@
                         })
                         .on("mousemove", function(event) {
                             tooltip
-                                .html(`<strong>${brand}</strong><br/>${current.mes}: ${cb.value}% → ${next.mes}: ${nb.value}%`)
+                                .html(`<strong>${brand}</strong><br/>${current.mes}: ${cb.displayValue}% → ${next.mes}: ${nb.displayValue}%`)
                                 .style("left", (event.clientX + 10) + "px")
                                 .style("top", (event.clientY - 10) + "px");
                         })
@@ -365,7 +371,7 @@
                         })
                         .on("mousemove", function(event) {
                             tooltip
-                                .html(`<strong>${brand}</strong><br/>${month.mes}: ${band.value}%`)
+                                .html(`<strong>${brand}</strong><br/>${month.mes}: ${band.displayValue}%`)
                                 .style("left", (event.clientX + 10) + "px")
                                 .style("top", (event.clientY - 10) + "px");
                         })
@@ -374,15 +380,19 @@
                             tooltip.style("opacity", 0);
                         });
 
-                    if (brand === highlightBrand && barWidth > 15 && rectHeight > 12) {
+                    if (brand === highlightBrand && barWidth > 15 && rectHeight > 15) {
+                        const labelY = y(band.y1) + rectHeight / 2;
+                        
                         svg.append("text")
                             .attr("x", xPos + barWidth / 2)
-                            .attr("y", y(band.y1) - 3)
+                            .attr("y", labelY)
                             .attr("text-anchor", "middle")
-                            .attr("fill", colors[brand] || '#999')
+                            .attr("dominant-baseline", "middle")
+                            .attr("fill", "#FFFFFF")
                             .attr("font-weight", "bold")
-                            .attr("font-size", "9px")
-                            .text(band.value + "%");
+                            .attr("font-size", "11px")
+                            .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
+                            .text(band.displayValue + "%");
                     }
                 });
             });
