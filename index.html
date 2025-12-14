@@ -6,49 +6,50 @@
     <title>Market Share - Ribbon Chart</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
-        /* 1. Limpieza total */
+        /* 1. Estructura Flexbox de Pantalla Completa */
         html, body {
+            height: 100vh; /* Alto exacto del viewport del iframe */
             width: 100vw;
-            height: 100vh;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Ocultar scrollbars sí o sí */
+            overflow: hidden; /* Prohibido el scroll */
             font-family: 'Segoe UI', Arial, sans-serif;
             background-color: #ffffff;
+            display: flex;
+            flex-direction: column; /* Apilar elementos verticalmente */
         }
 
-        /* 2. Elementos posicionados */
-        #chart-header {
-            width: 100%;
+        /* 2. Encabezado Fijo (No se encoge) */
+        #header-area {
+            flex: 0 0 auto; /* Tamaño fijo basado en contenido */
             text-align: center;
-            padding-top: 10px;
-            padding-bottom: 5px;
-            /* Altura automática basada en contenido */
+            padding: 10px 0 5px 0;
         }
-        #chart-header h1 {
-            margin: 0;
-            font-size: 16px;
-            color: #333;
+        h1 { margin: 0; font-size: 16px; color: #333; }
+
+        /* 3. Área del Gráfico (Flexible) */
+        /* LA CLAVE: min-height: 0 permite que este div se encoja si es necesario */
+        #chart-wrapper {
+            flex: 1 1 auto; 
+            min-height: 0; 
+            width: 100%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        #chart-legend {
-            width: 100%;
+        /* 4. Leyenda Fija (No se encoge) */
+        #legend-area {
+            flex: 0 0 auto;
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
             gap: 15px;
-            padding-bottom: 10px;
-            padding-top: 5px;
-            /* Altura automática basada en contenido */
+            padding: 5px 10px 10px 10px;
         }
 
-        #chart-container {
-            /* Este div ocupará el espacio calculado por JS */
-            display: block;
-            margin: 0 auto;
-        }
-
-        /* Estilos D3 */
+        /* Estilos generales D3 */
         .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
         .legend-color { width: 12px; height: 12px; border-radius: 2px; }
         .tooltip {
@@ -62,6 +63,7 @@
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 1000;
+            top: 0; left: 0;
         }
         .axis text { font-size: 10px; fill: #666; }
         .axis line, .axis path { stroke: #ddd; }
@@ -72,19 +74,20 @@
 </head>
 <body>
 
-    <div id="chart-header">
+    <div id="header-area">
         <h1>Market Share por Mes (%)</h1>
     </div>
 
-    <div id="chart-container">
+    <div id="chart-wrapper">
         <svg id="ribbon-chart"></svg>
     </div>
 
-    <div id="chart-legend"></div>
+    <div id="legend-area"></div>
+    
     <div class="tooltip" id="tooltip"></div>
 
     <script>
-        // DATOS
+        // --- DATOS ---
         const data = [
             { mes: 'ENE', SUZUKI: 26, HONDA: 26, YAMAHA: 15, AUTECO: 12, AKT: 8, HERO: 7, SYM: 6 },
             { mes: 'FEB', SUZUKI: 26, HONDA: 23, YAMAHA: 17, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
@@ -105,59 +108,54 @@
             'AUTECO': '#9E9E9E', 'AKT': '#FF9800', 'HERO': '#795548', 'SYM': '#B0BEC5'
         };
 
-        // Renderizar leyenda PRIMERO para poder medir su altura después
-        const legendContainer = d3.select('#chart-legend');
+        // Renderizar Leyenda una sola vez
+        const legendContainer = d3.select('#legend-area');
         brands.forEach(brand => {
             const item = legendContainer.append('div').attr('class', 'legend-item');
             item.append('div').attr('class', 'legend-color').style('background-color', colors[brand]);
             item.append('span').text(brand);
         });
 
+        // --- FUNCIÓN DE DIBUJADO PRINCIPAL ---
         function drawChart() {
-            // 1. Obtener dimensiones de la ventana (El IFrame de Power Apps)
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
+            // 1. Obtener el contenedor FLEXIBLE (No la ventana)
+            const container = document.getElementById('chart-wrapper');
+            
+            // 2. Medir el espacio disponible real dentro de ese div
+            const availableWidth = container.clientWidth;
+            const availableHeight = container.clientHeight;
 
-            // Seguridad: Si Power Apps reporta 0, intentar de nuevo en 100ms
-            if (windowHeight < 50) {
-                setTimeout(drawChart, 200);
-                return;
-            }
+            // Si el contenedor colapsó a 0 (carga inicial), no hacer nada y esperar
+            if (availableWidth === 0 || availableHeight === 0) return;
 
-            // 2. Medir elementos fijos
-            const headerHeight = document.getElementById('chart-header').offsetHeight;
-            const legendHeight = document.getElementById('chart-legend').offsetHeight;
-
-            // 3. CALCULO MATEMÁTICO DE LA ALTURA DISPONIBLE
-            // Altura Ventana - Header - Legend - 20px de margen de seguridad
-            const chartHeight = windowHeight - headerHeight - legendHeight - 20;
-            const chartWidth = windowWidth - 20; // 10px margen a cada lado
-
-            // Limpiar SVG previo
+            // 3. Limpiar SVG previo
             d3.select("#ribbon-chart").selectAll("*").remove();
 
-            // Configurar SVG con las dimensiones calculadas
-            const margin = { top: 10, right: 30, bottom: 20, left: 30 };
-            const width = chartWidth - margin.left - margin.right;
-            const height = chartHeight - margin.top - margin.bottom;
+            // 4. Configurar márgenes dentro del SVG
+            const margin = { top: 10, right: 25, bottom: 20, left: 35 };
+            const width = availableWidth - margin.left - margin.right;
+            const height = availableHeight - margin.top - margin.bottom;
 
-            // Evitar errores si el espacio es negativo
-            if (height <= 0 || width <= 0) return; 
+            // Seguridad por si los márgenes son mayores al espacio
+            if (width <= 0 || height <= 0) return;
 
+            // 5. Crear SVG con dimensiones exactas del div contenedor
             const svg = d3.select('#ribbon-chart')
-                .attr('width', chartWidth)
-                .attr('height', chartHeight)
+                .attr('width', availableWidth)
+                .attr('height', availableHeight)
                 .append('g')
                 .attr('transform', `translate(${margin.left},${margin.top})`);
 
-            // --- Lógica de D3 (Igual que antes) ---
+            // --- Lógica D3 ---
             const x = d3.scaleBand().domain(data.map(d => d.mes)).range([0, width]).padding(0.2);
             const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
 
+            // Grid y Ejes
             svg.append('g').attr('class', 'grid').call(d3.axisLeft(y).tickSize(-width).tickFormat('').ticks(5));
             svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x));
             svg.append('g').attr('class', 'axis').call(d3.axisLeft(y).tickFormat(d => d + '%').ticks(5));
 
+            // Procesamiento Datos
             const processedData = data.map(d => {
                 const values = brands.map(brand => ({ brand, value: d[brand] }));
                 values.sort((a, b) => b.value - a.value);
@@ -173,12 +171,12 @@
             const tooltip = d3.select('#tooltip');
 
             brands.forEach(brand => {
+                // Cintas
                 for (let i = 0; i < processedData.length - 1; i++) {
                     const current = processedData[i];
                     const next = processedData[i + 1];
                     const currentBand = current.bands.find(b => b.brand === brand);
                     const nextBand = next.bands.find(b => b.brand === brand);
-                    
                     if (!currentBand || !nextBand) continue;
 
                     const x0 = x(current.mes);
@@ -190,7 +188,6 @@
                         L ${x1},${y(nextBand.y1)}
                         C ${x1 - (x1 - x0 - barWidth) / 2},${y(nextBand.y1)} ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(currentBand.y1)} ${x0 + barWidth},${y(currentBand.y1)} Z
                     `;
-                    
                     svg.append('path').attr('class', 'ribbon').attr('d', ribbonPath).attr('fill', colors[brand]).attr('stroke', 'none')
                         .on('mousemove', (event) => {
                             tooltip.style('opacity', 1).html(`<strong>${brand}</strong><br/>${current.mes}: ${currentBand.value}% → ${next.mes}: ${nextBand.value}%`)
@@ -198,7 +195,7 @@
                         })
                         .on('mouseout', () => tooltip.style('opacity', 0));
                 }
-
+                // Barras verticales
                 processedData.forEach((month) => {
                     const band = month.bands.find(b => b.brand === brand);
                     if (!band) return;
@@ -219,9 +216,18 @@
             });
         }
 
-        // Eventos
-        window.addEventListener('load', drawChart);
-        window.addEventListener('resize', drawChart);
+        // --- OBSERVADOR DE REDIMENSIONAMIENTO (La parte crítica) ---
+        // Esto detecta si el DIV cambia de tamaño, no solo la ventana.
+        const resizeObserver = new ResizeObserver(entries => {
+            // Usamos requestAnimationFrame para evitar errores de bucle de redimensionamiento
+            window.requestAnimationFrame(() => {
+                drawChart();
+            });
+        });
+
+        // Comenzar a observar el contenedor principal
+        resizeObserver.observe(document.getElementById('chart-wrapper'));
+
     </script>
 </body>
 </html>
