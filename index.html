@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Share - Ribbon Chart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #ffffff;
+            overflow-x: hidden;
+        }
+        #chart-container {
+            background: white;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin: 0 0 30px 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+        .axis text {
+            font-size: 11px;
+            fill: #666;
+        }
+        .axis line, .axis path {
+            stroke: #ddd;
+        }
+        .grid line {
+            stroke: #f0f0f0;
+            stroke-dasharray: 2,2;
+        }
+        .ribbon {
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .ribbon:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart-container">
+        <h1>Market Share por Mes (%)</h1>
+        <svg id="ribbon-chart"></svg>
+        <div class="legend" id="legend"></div>
+    </div>
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        const data = [
+            { mes: 'ENE', SUZUKI: 26, HONDA: 26, YAMAHA: 15, AUTECO: 12, AKT: 8, HERO: 7, SYM: 6 },
+            { mes: 'FEB', SUZUKI: 26, HONDA: 23, YAMAHA: 17, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
+            { mes: 'MAR', SUZUKI: 23, HONDA: 27, YAMAHA: 16, AUTECO: 12, AKT: 9, HERO: 7, SYM: 6 },
+            { mes: 'ABR', SUZUKI: 23, HONDA: 27, YAMAHA: 16, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
+            { mes: 'MAY', SUZUKI: 27, HONDA: 23, YAMAHA: 15, AUTECO: 13, AKT: 10, HERO: 6, SYM: 6 },
+            { mes: 'JUN', SUZUKI: 21, HONDA: 27, YAMAHA: 17, AUTECO: 13, AKT: 10, HERO: 6, SYM: 6 },
+            { mes: 'JUL', SUZUKI: 25, HONDA: 23, YAMAHA: 16, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
+            { mes: 'AGO', SUZUKI: 23, HONDA: 24, YAMAHA: 17, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
+            { mes: 'SEP', SUZUKI: 23, HONDA: 24, YAMAHA: 17, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
+            { mes: 'OCT', SUZUKI: 24, HONDA: 23, YAMAHA: 17, AUTECO: 14, AKT: 10, HERO: 6, SYM: 6 },
+            { mes: 'NOV', SUZUKI: 24, HONDA: 24, YAMAHA: 16, AUTECO: 14, AKT: 10, HERO: 6, SYM: 6 }
+        ];
+
+        const brands = ['SUZUKI', 'HONDA', 'YAMAHA', 'AUTECO', 'AKT', 'HERO', 'SYM'];
+        const colors = {
+            'SUZUKI': '#4CAF50',
+            'HONDA': '#F44336',
+            'YAMAHA': '#2196F3',
+            'AUTECO': '#9E9E9E',
+            'AKT': '#FF9800',
+            'HERO': '#795548',
+            'SYM': '#B0BEC5'
+        };
+
+        const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+        const width = 1140 - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+
+        const svg = d3.select('#ribbon-chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleBand()
+            .domain(data.map(d => d.mes))
+            .range([0, width])
+            .padding(0.2);
+
+        const y = d3.scaleLinear()
+            .domain([0, 100])
+            .range([height, 0]);
+
+        svg.append('g')
+            .attr('class', 'grid')
+            .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+
+        svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x));
+
+        svg.append('g')
+            .attr('class', 'axis')
+            .call(d3.axisLeft(y).tickFormat(d => d + '%'));
+
+        const processedData = data.map(d => {
+            const values = brands.map(brand => ({ brand, value: d[brand] }));
+            values.sort((a, b) => b.value - a.value);
+            
+            let cumulative = 0;
+            const bands = values.map(v => {
+                const start = cumulative;
+                cumulative += v.value;
+                return {
+                    brand: v.brand,
+                    value: v.value,
+                    y0: start,
+                    y1: cumulative
+                };
+            });
+            
+            return { mes: d.mes, bands };
+        });
+
+        const tooltip = d3.select('#tooltip');
+        const barWidth = x.bandwidth();
+
+        brands.forEach(brand => {
+            for (let i = 0; i < processedData.length - 1; i++) {
+                const current = processedData[i];
+                const next = processedData[i + 1];
+                
+                const currentBand = current.bands.find(b => b.brand === brand);
+                const nextBand = next.bands.find(b => b.brand === brand);
+                
+                const x0 = x(current.mes);
+                const x1 = x(next.mes);
+                
+                const ribbonPath = `
+                    M ${x0},${y(currentBand.y0)}
+                    L ${x0 + barWidth},${y(currentBand.y0)}
+                    L ${x0 + barWidth},${y(currentBand.y1)}
+                    L ${x0},${y(currentBand.y1)}
+                    Z
+                    M ${x0 + barWidth},${y(currentBand.y0)}
+                    C ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(currentBand.y0)}
+                      ${x1 - (x1 - x0 - barWidth) / 2},${y(nextBand.y0)}
+                      ${x1},${y(nextBand.y0)}
+                    L ${x1},${y(nextBand.y1)}
+                    C ${x1 - (x1 - x0 - barWidth) / 2},${y(nextBand.y1)}
+                      ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(currentBand.y1)}
+                      ${x0 + barWidth},${y(currentBand.y1)}
+                    Z
+                `;
+                
+                svg.append('path')
+                    .attr('class', 'ribbon')
+                    .attr('d', ribbonPath)
+                    .attr('fill', colors[brand])
+                    .attr('stroke', 'none')
+                    .on('mouseover', function(event) {
+                        d3.select(this).style('opacity', 1);
+                        tooltip.style('opacity', 1);
+                    })
+                    .on('mousemove', function(event) {
+                        tooltip
+                            .html(`<strong>${brand}</strong><br/>${current.mes}: ${currentBand.value}% → ${next.mes}: ${nextBand.value}%`)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 10) + 'px');
+                    })
+                    .on('mouseout', function() {
+                        d3.select(this).style('opacity', 0.8);
+                        tooltip.style('opacity', 0);
+                    });
+            }
+            
+            processedData.forEach((month, idx) => {
+                const band = month.bands.find(b => b.brand === brand);
+                const xPos = x(month.mes);
+                
+                svg.append('rect')
+                    .attr('x', xPos)
+                    .attr('y', y(band.y1))
+                    .attr('width', barWidth)
+                    .attr('height', y(band.y0) - y(band.y1))
+                    .attr('fill', colors[brand])
+                    .attr('opacity', 0.8)
+                    .on('mouseover', function(event) {
+                        d3.select(this).attr('opacity', 1);
+                        tooltip.style('opacity', 1);
+                    })
+                    .on('mousemove', function(event) {
+                        tooltip
+                            .html(`<strong>${brand}</strong><br/>${month.mes}: ${band.value}%`)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 10) + 'px');
+                    })
+                    .on('mouseout', function() {
+                        d3.select(this).attr('opacity', 0.8);
+                        tooltip.style('opacity', 0);
+                    });
+                
+                if (brand === 'HONDA') {
+                    svg.append('text')
+                        .attr('x', xPos + barWidth / 2)
+                        .attr('y', y(band.y1) - 5)
+                        .attr('text-anchor', 'middle')
+                        .attr('fill', colors[brand])
+                        .attr('font-weight', 'bold')
+                        .attr('font-size', '11px')
+                        .text(band.value + '%');
+                }
+            });
+        });
+
+        const legend = d3.select('#legend');
+        brands.forEach(brand => {
+            const item = legend.append('div').attr('class', 'legend-item');
+            item.append('div')
+                .attr('class', 'legend-color')
+                .style('background-color', colors[brand]);
+            item.append('span').text(brand);
+        });
+    </script>
+</body>
+</html>
