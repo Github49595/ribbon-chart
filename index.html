@@ -6,7 +6,6 @@
     <title>Market Share Responsive</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
-        /* Forzamos al cuerpo a ocupar todo el espacio del Iframe sin scroll */
         html, body {
             margin: 0;
             padding: 0;
@@ -18,48 +17,69 @@
             flex-direction: column;
         }
 
-        /* Título fijo */
         #header {
             flex: 0 0 auto;
             text-align: center;
-            padding: 10px 0;
+            padding: 8px 0;
             background: #fff;
         }
-        h1 { margin: 0; font-size: 14px; color: #333; }
+        h1 { margin: 0; font-size: 14px; color: #333; font-weight: 600; }
 
-        /* Contenedor del gráfico: Ocupa todo el espacio restante */
         #chart-container {
-            flex: 1; 
+            flex: 1;
             width: 100%;
             position: relative;
-            min-height: 0; /* Crucial para evitar desbordamientos en Flexbox */
+            min-height: 0;
+            overflow: hidden;
         }
 
-        /* Leyenda fija abajo */
         #legend {
             flex: 0 0 auto;
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
             padding: 10px;
             background: #fff;
         }
         
-        /* Estilos D3 */
-        .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
-        .legend-color { width: 12px; height: 12px; border-radius: 2px; }
-        .tooltip {
-            position: absolute; background: rgba(0,0,0,0.8); color: white;
-            padding: 6px; border-radius: 4px; font-size: 11px;
-            pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 999;
+        .legend-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 11px; 
         }
-        .axis text { font-size: 10px; fill: #666; }
-        .axis line, .axis path { stroke: #e0e0e0; }
+        .legend-color { 
+            width: 14px; 
+            height: 14px; 
+            border-radius: 2px; 
+        }
+        .tooltip {
+            position: fixed;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 9999;
+        }
+        .axis text { 
+            font-size: 10px; 
+            fill: #666; 
+        }
+        .axis line, .axis path { 
+            stroke: #ddd; 
+        }
+        .grid line {
+            stroke: #f0f0f0;
+            stroke-dasharray: 2,2;
+        }
     </style>
 </head>
 <body>
-
     <div id="header">
         <h1>Market Share por Mes (%)</h1>
     </div>
@@ -85,9 +105,16 @@
         ];
 
         const brands = ['SUZUKI', 'HONDA', 'YAMAHA', 'AUTECO', 'AKT', 'HERO', 'SYM'];
-        const colors = { 'SUZUKI': '#4CAF50', 'HONDA': '#F44336', 'YAMAHA': '#2196F3', 'AUTECO': '#9E9E9E', 'AKT': '#FF9800', 'HERO': '#795548', 'SYM': '#B0BEC5' };
+        const colors = {
+            'SUZUKI': '#4CAF50',
+            'HONDA': '#F44336',
+            'YAMAHA': '#2196F3',
+            'AUTECO': '#9E9E9E',
+            'AKT': '#FF9800',
+            'HERO': '#795548',
+            'SYM': '#B0BEC5'
+        };
 
-        // Renderizar leyenda fija (solo una vez)
         const legendDiv = d3.select("#legend");
         brands.forEach(brand => {
             const item = legendDiv.append("div").attr("class", "legend-item");
@@ -98,14 +125,16 @@
         const container = document.getElementById("chart-container");
         const tooltip = d3.select("#tooltip");
 
-        // Función principal de dibujo que recibe el ancho/alto exacto del contenedor
-        function draw(width, height) {
-            // Limpiar dibujo anterior
+        function draw() {
             d3.select("#chart-container").selectAll("svg").remove();
 
-            if (width < 50 || height < 50) return; // Evitar errores si está colapsado
+            const rect = container.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
 
-            const margin = { top: 10, right: 10, bottom: 20, left: 30 };
+            if (width < 50 || height < 50) return;
+
+            const margin = { top: 10, right: 20, bottom: 25, left: 40 };
             const innerWidth = width - margin.left - margin.right;
             const innerHeight = height - margin.top - margin.bottom;
 
@@ -116,25 +145,39 @@
                 .append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
-            // Escalas
-            const x = d3.scaleBand().domain(data.map(d => d.mes)).range([0, innerWidth]).padding(0.2);
-            const y = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.mes))
+                .range([0, innerWidth])
+                .padding(0.2);
 
-            // Ejes
-            svg.append("g").call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(5)).attr("class", "grid").style("stroke-dasharray", "2,2").style("opacity", 0.3);
-            svg.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x)).attr("class", "axis");
-            svg.append("g").call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5)).attr("class", "axis");
+            const y = d3.scaleLinear()
+                .domain([0, 100])
+                .range([innerHeight, 0]);
 
-            // Procesamiento de datos para Cintas
+            svg.append("g")
+                .attr("class", "grid")
+                .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(5))
+                .style("opacity", 0.3);
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x));
+
+            svg.append("g")
+                .attr("class", "axis")
+                .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5));
+
             const processedData = data.map(d => {
                 const values = brands.map(brand => ({ brand, value: d[brand] }));
                 values.sort((a, b) => b.value - a.value);
-                let cum = 0;
+                let cumulative = 0;
                 return {
                     mes: d.mes,
                     bands: values.map(v => {
-                        const start = cum; cum += v.value;
-                        return { brand: v.brand, value: v.value, y0: start, y1: cum };
+                        const start = cumulative;
+                        cumulative += v.value;
+                        return { brand: v.brand, value: v.value, y0: start, y1: cumulative };
                     })
                 };
             });
@@ -142,64 +185,103 @@
             const barWidth = x.bandwidth();
 
             brands.forEach(brand => {
-                // Dibujar Cintas (Conectores curvos)
                 for (let i = 0; i < processedData.length - 1; i++) {
-                    const curr = processedData[i];
+                    const current = processedData[i];
                     const next = processedData[i + 1];
-                    const cb = curr.bands.find(b => b.brand === brand);
+                    const cb = current.bands.find(b => b.brand === brand);
                     const nb = next.bands.find(b => b.brand === brand);
                     
                     if (!cb || !nb) continue;
 
-                    const x0 = x(curr.mes);
+                    const x0 = x(current.mes);
                     const x1 = x(next.mes);
-                    const path = `
-                        M ${x0},${y(cb.y0)} L ${x0+barWidth},${y(cb.y0)} L ${x0+barWidth},${y(cb.y1)} L ${x0},${y(cb.y1)} Z
-                        M ${x0+barWidth},${y(cb.y0)} 
-                        C ${x0+barWidth + (x1-x0-barWidth)/2},${y(cb.y0)} ${x1-(x1-x0-barWidth)/2},${y(nb.y0)} ${x1},${y(nb.y0)}
+                    const ribbonPath = `
+                        M ${x0},${y(cb.y0)}
+                        L ${x0 + barWidth},${y(cb.y0)}
+                        L ${x0 + barWidth},${y(cb.y1)}
+                        L ${x0},${y(cb.y1)}
+                        Z
+                        M ${x0 + barWidth},${y(cb.y0)}
+                        C ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(cb.y0)}
+                          ${x1 - (x1 - x0 - barWidth) / 2},${y(nb.y0)}
+                          ${x1},${y(nb.y0)}
                         L ${x1},${y(nb.y1)}
-                        C ${x1-(x1-x0-barWidth)/2},${y(nb.y1)} ${x0+barWidth + (x1-x0-barWidth)/2},${y(cb.y1)} ${x0+barWidth},${y(cb.y1)} Z
+                        C ${x1 - (x1 - x0 - barWidth) / 2},${y(nb.y1)}
+                          ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(cb.y1)}
+                          ${x0 + barWidth},${y(cb.y1)}
+                        Z
                     `;
-                    svg.append("path").attr("d", path).attr("fill", colors[brand]).attr("opacity", 0.8)
-                        .on("mousemove", e => tooltip.style("opacity", 1).html(`${brand}: ${cb.value}%`).style("left", (e.pageX+10)+"px").style("top", (e.pageY-10)+"px"))
-                        .on("mouseout", () => tooltip.style("opacity", 0));
+                    
+                    svg.append("path")
+                        .attr("d", ribbonPath)
+                        .attr("fill", colors[brand])
+                        .attr("opacity", 0.8)
+                        .on("mouseover", function() {
+                            d3.select(this).attr("opacity", 1);
+                            tooltip.style("opacity", 1);
+                        })
+                        .on("mousemove", function(event) {
+                            tooltip
+                                .html(`<strong>${brand}</strong><br/>${current.mes}: ${cb.value}% → ${next.mes}: ${nb.value}%`)
+                                .style("left", (event.clientX + 10) + "px")
+                                .style("top", (event.clientY - 10) + "px");
+                        })
+                        .on("mouseout", function() {
+                            d3.select(this).attr("opacity", 0.8);
+                            tooltip.style("opacity", 0);
+                        });
                 }
 
-                // Dibujar Barras verticales
-                processedData.forEach(m => {
-                    const b = m.bands.find(v => v.brand === brand);
-                    if (!b) return;
+                processedData.forEach(month => {
+                    const band = month.bands.find(b => b.brand === brand);
+                    if (!band) return;
                     
-                    const rect = svg.append("rect")
-                        .attr("x", x(m.mes)).attr("y", y(b.y1))
-                        .attr("width", barWidth).attr("height", Math.max(0, y(b.y0) - y(b.y1)))
-                        .attr("fill", colors[brand]);
+                    const xPos = x(month.mes);
+                    
+                    svg.append("rect")
+                        .attr("x", xPos)
+                        .attr("y", y(band.y1))
+                        .attr("width", barWidth)
+                        .attr("height", Math.max(0, y(band.y0) - y(band.y1)))
+                        .attr("fill", colors[brand])
+                        .attr("opacity", 0.8)
+                        .on("mouseover", function() {
+                            d3.select(this).attr("opacity", 1);
+                            tooltip.style("opacity", 1);
+                        })
+                        .on("mousemove", function(event) {
+                            tooltip
+                                .html(`<strong>${brand}</strong><br/>${month.mes}: ${band.value}%`)
+                                .style("left", (event.clientX + 10) + "px")
+                                .style("top", (event.clientY - 10) + "px");
+                        })
+                        .on("mouseout", function() {
+                            d3.select(this).attr("opacity", 0.8);
+                            tooltip.style("opacity", 0);
+                        });
 
-                    // Etiqueta solo para HONDA si es relevante
-                    if (brand === "HONDA" && b.value > 5) {
-                        svg.append("text").attr("x", x(m.mes) + barWidth / 2).attr("y", y(b.y1) - 2)
-                            .attr("text-anchor", "middle").style("font-size", "9px").style("font-weight", "bold").attr("fill", colors[brand])
-                            .text(b.value + "%");
+                    if (brand === 'HONDA' && barWidth > 20) {
+                        svg.append("text")
+                            .attr("x", xPos + barWidth / 2)
+                            .attr("y", y(band.y1) - 4)
+                            .attr("text-anchor", "middle")
+                            .attr("fill", colors[brand])
+                            .attr("font-weight", "bold")
+                            .attr("font-size", "10px")
+                            .text(band.value + "%");
                     }
                 });
             });
         }
 
-        // --- EL CEREBRO DE LA RESPONSIVIDAD ---
-        // ResizeObserver detecta cambios de tamaño en el DIV contenedor, no en la ventana.
-        // Esto funciona incluso si PowerApps redimensiona el control dinámicamente.
-        const observer = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                // Obtenemos el ancho y alto exacto del div en este momento
-                const { width, height } = entry.contentRect;
-                // Llamamos a dibujar con las medidas exactas
-                draw(width, height);
-            }
+        const resizeObserver = new ResizeObserver(() => {
+            draw();
         });
 
-        // Comenzar a observar el contenedor
-        observer.observe(container);
+        resizeObserver.observe(container);
 
+        window.addEventListener('load', draw);
+        window.addEventListener('resize', draw);
     </script>
 </body>
 </html>
