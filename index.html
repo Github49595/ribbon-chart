@@ -11,37 +11,57 @@
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             background: #ffffff;
-            overflow-x: hidden;
+            /* CAMBIO 1: Aseguramos que no haya scrollbars y ocupe el 100% de la altura visible */
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
         }
         #chart-container {
             background: white;
-            padding: 20px;
+            padding: 10px; /* Reducido un poco el padding */
+            /* CAMBIO 2: El contenedor usa Flexbox para distribuir el espacio */
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             width: 100%;
+            height: 100%;
             box-sizing: border-box;
         }
         h1 {
             text-align: center;
             color: #333;
-            margin: 0 0 30px 0;
-            font-size: 20px;
+            margin: 0 0 10px 0; /* Margen reducido */
+            font-size: 18px; /* Fuente ajustada */
             font-weight: 600;
+            flex-shrink: 0; /* El titulo no se encoge */
+        }
+        /* CAMBIO 3: El SVG ahora es flexible */
+        #ribbon-chart {
+            flex: 1; 
+            width: 100%;
+            /* height se define en D3, pero esto ayuda al layout */
         }
         .legend {
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 20px;
-            margin-top: 20px;
+            gap: 15px;
+            margin-top: 10px;
+            padding-bottom: 5px;
+            flex-shrink: 0; /* La leyenda no se encoge demasiado */
         }
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
+            gap: 5px;
+            font-size: 12px;
         }
         .legend-color {
-            width: 20px;
-            height: 20px;
+            width: 15px;
+            height: 15px;
             border-radius: 3px;
         }
         .tooltip {
@@ -110,9 +130,15 @@
             'SYM': '#B0BEC5'
         };
 
-        const margin = { top: 20, right: 20, bottom: 40, left: 50 };
-        const width = 1140 - margin.left - margin.right;
-        const height = 500 - margin.top - margin.bottom;
+        // CAMBIO 4: Calcular dimensiones dinámicamente basadas en la ventana
+        // Restamos espacio para el titulo (aprox 40px) y la leyenda (aprox 60px) y padding
+        const margin = { top: 10, right: 20, bottom: 20, left: 40 };
+        
+        // window.innerWidth nos da el ancho real del IFrame en Power Apps
+        const width = window.innerWidth - margin.left - margin.right - 20; // -20 por seguridad de padding
+        
+        // window.innerHeight nos da el alto real. Restamos 80px aprox para título y leyenda.
+        const height = window.innerHeight - margin.top - margin.bottom - 80;
 
         const svg = d3.select('#ribbon-chart')
             .attr('width', width + margin.left + margin.right)
