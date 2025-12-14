@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Share Responsive</title>
+    <title>Market Share Dynamic</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         * {
@@ -22,7 +22,6 @@
         body {
             display: flex;
             flex-direction: column;
-            border: 5px solid red;
         }
 
         #header {
@@ -107,6 +106,14 @@
             stroke: #f0f0f0;
             stroke-dasharray: 2,2;
         }
+
+        #error-message {
+            display: none;
+            padding: 20px;
+            text-align: center;
+            color: #d32f2f;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -114,13 +121,13 @@
         <h1>Market Share por Mes (%)</h1>
     </div>
 
+    <div id="error-message"></div>
     <div id="chart-container"></div>
-
     <div id="legend"></div>
     <div id="tooltip" class="tooltip"></div>
 
     <script>
-        const data = [
+        const defaultData = [
             { mes: 'ENE', SUZUKI: 26, HONDA: 26, YAMAHA: 15, AUTECO: 12, AKT: 8, HERO: 7, SYM: 6 },
             { mes: 'FEB', SUZUKI: 26, HONDA: 23, YAMAHA: 17, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
             { mes: 'MAR', SUZUKI: 23, HONDA: 27, YAMAHA: 16, AUTECO: 12, AKT: 9, HERO: 7, SYM: 6 },
@@ -134,8 +141,7 @@
             { mes: 'NOV', SUZUKI: 24, HONDA: 24, YAMAHA: 16, AUTECO: 14, AKT: 10, HERO: 6, SYM: 6 }
         ];
 
-        const brands = ['SUZUKI', 'HONDA', 'YAMAHA', 'AUTECO', 'AKT', 'HERO', 'SYM'];
-        const colors = {
+        const defaultColors = {
             'SUZUKI': '#4CAF50',
             'HONDA': '#F44336',
             'YAMAHA': '#2196F3',
@@ -145,10 +151,76 @@
             'SYM': '#B0BEC5'
         };
 
+        function parseUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            const monthsParam = urlParams.get('months');
+            if (!monthsParam) return null;
+
+            const months = monthsParam.split(',');
+            const data = [];
+            const brands = [];
+
+            for (const [key, value] of urlParams.entries()) {
+                if (key !== 'months' && key !== 'colors' && key !== 'highlight') {
+                    brands.push(key);
+                }
+            }
+
+            for (let i = 0; i < months.length; i++) {
+                const monthData = { mes: months[i].trim() };
+                brands.forEach(brand => {
+                    const values = urlParams.get(brand).split(',');
+                    monthData[brand] = parseFloat(values[i]) || 0;
+                });
+                data.push(monthData);
+            }
+
+            const colorsParam = urlParams.get('colors');
+            let colors = { ...defaultColors };
+            if (colorsParam) {
+                const colorPairs = colorsParam.split('|');
+                colorPairs.forEach(pair => {
+                    const [brand, color] = pair.split(':');
+                    if (brand && color) colors[brand] = color;
+                });
+            }
+
+            const highlightParam = urlParams.get('highlight');
+            const highlight = highlightParam ? highlightParam.toUpperCase() : 'HONDA';
+
+            return { data, brands, colors, highlight };
+        }
+
+        let chartData, brands, colors, highlightBrand;
+
+        try {
+            const parsed = parseUrlParams();
+            if (parsed && parsed.data.length > 0) {
+                chartData = parsed.data;
+                brands = parsed.brands;
+                colors = parsed.colors;
+                highlightBrand = parsed.highlight;
+            } else {
+                chartData = defaultData;
+                brands = ['SUZUKI', 'HONDA', 'YAMAHA', 'AUTECO', 'AKT', 'HERO', 'SYM'];
+                colors = defaultColors;
+                highlightBrand = 'HONDA';
+            }
+        } catch (error) {
+            console.error('Error parsing URL params:', error);
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('error-message').textContent = 'Error al cargar los datos. Mostrando datos de ejemplo.';
+            chartData = defaultData;
+            brands = ['SUZUKI', 'HONDA', 'YAMAHA', 'AUTECO', 'AKT', 'HERO', 'SYM'];
+            colors = defaultColors;
+            highlightBrand = 'HONDA';
+        }
+
         const legendDiv = d3.select("#legend");
         brands.forEach(brand => {
             const item = legendDiv.append("div").attr("class", "legend-item");
-            item.append("div").attr("class", "legend-color").style("background-color", colors[brand]);
+            item.append("div").attr("class", "legend-color").style("background-color", colors[brand] || '#999');
             item.append("span").text(brand);
         });
 
@@ -185,7 +257,7 @@
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
             const x = d3.scaleBand()
-                .domain(data.map(d => d.mes))
+                .domain(chartData.map(d => d.mes))
                 .range([0, innerWidth])
                 .padding(0.15);
 
@@ -207,8 +279,8 @@
                 .attr("class", "axis")
                 .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5).tickSize(5));
 
-            const processedData = data.map(d => {
-                const values = brands.map(brand => ({ brand, value: d[brand] }));
+            const processedData = chartData.map(d => {
+                const values = brands.map(brand => ({ brand, value: d[brand] || 0 }));
                 values.sort((a, b) => a.value - b.value);
                 let cumulative = 0;
                 return {
@@ -253,7 +325,7 @@
                     
                     svg.append("path")
                         .attr("d", ribbonPath)
-                        .attr("fill", colors[brand])
+                        .attr("fill", colors[brand] || '#999')
                         .attr("opacity", 0.8)
                         .style("cursor", "pointer")
                         .on("mouseover", function() {
@@ -284,7 +356,7 @@
                         .attr("y", y(band.y1))
                         .attr("width", barWidth)
                         .attr("height", rectHeight)
-                        .attr("fill", colors[brand])
+                        .attr("fill", colors[brand] || '#999')
                         .attr("opacity", 0.8)
                         .style("cursor", "pointer")
                         .on("mouseover", function() {
@@ -302,12 +374,12 @@
                             tooltip.style("opacity", 0);
                         });
 
-                    if (brand === 'HONDA' && barWidth > 15 && rectHeight > 12) {
+                    if (brand === highlightBrand && barWidth > 15 && rectHeight > 12) {
                         svg.append("text")
                             .attr("x", xPos + barWidth / 2)
                             .attr("y", y(band.y1) - 3)
                             .attr("text-anchor", "middle")
-                            .attr("fill", colors[brand])
+                            .attr("fill", colors[brand] || '#999')
                             .attr("font-weight", "bold")
                             .attr("font-size", "9px")
                             .text(band.value + "%");
