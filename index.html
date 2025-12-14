@@ -6,73 +6,102 @@
     <title>Market Share Responsive</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
-        html, body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
             width: 100%;
             height: 100%;
             overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
             display: flex;
             flex-direction: column;
         }
 
         #header {
-            flex: 0 0 auto;
+            height: 35px;
             text-align: center;
             padding: 8px 0;
             background: #fff;
+            flex-shrink: 0;
         }
-        h1 { margin: 0; font-size: 14px; color: #333; font-weight: 600; }
+        
+        h1 { 
+            margin: 0; 
+            font-size: 14px; 
+            color: #333; 
+            font-weight: 600; 
+        }
 
         #chart-container {
             flex: 1;
             width: 100%;
             position: relative;
-            min-height: 0;
             overflow: hidden;
+            background: #fff;
+        }
+        
+        #chart-container svg {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
         }
 
         #legend {
-            flex: 0 0 auto;
+            height: 40px;
             display: flex;
             justify-content: center;
+            align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
-            padding: 10px;
+            gap: 10px;
+            padding: 8px;
             background: #fff;
+            flex-shrink: 0;
         }
         
         .legend-item { 
             display: flex; 
             align-items: center; 
-            gap: 6px; 
-            font-size: 11px; 
+            gap: 5px; 
+            font-size: 10px; 
         }
+        
         .legend-color { 
-            width: 14px; 
-            height: 14px; 
+            width: 12px; 
+            height: 12px; 
             border-radius: 2px; 
+            flex-shrink: 0;
         }
+        
         .tooltip {
             position: fixed;
             background: rgba(0,0,0,0.9);
             color: white;
             padding: 8px 12px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 9999;
+            white-space: nowrap;
         }
+        
         .axis text { 
-            font-size: 10px; 
+            font-size: 9px; 
             fill: #666; 
         }
+        
         .axis line, .axis path { 
             stroke: #ddd; 
         }
+        
         .grid line {
             stroke: #f0f0f0;
             stroke-dasharray: 2,2;
@@ -126,29 +155,38 @@
         const tooltip = d3.select("#tooltip");
 
         function draw() {
-            d3.select("#chart-container").selectAll("svg").remove();
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
 
-            const rect = container.getBoundingClientRect();
-            const width = rect.width;
-            const height = rect.height;
+            if (containerWidth < 100 || containerHeight < 100) return;
 
-            if (width < 50 || height < 50) return;
+            d3.select("#chart-container").selectAll("*").remove();
 
-            const margin = { top: 10, right: 20, bottom: 25, left: 40 };
+            const margin = { 
+                top: 10, 
+                right: 15, 
+                bottom: 20, 
+                left: 35 
+            };
+            
+            const width = containerWidth;
+            const height = containerHeight;
             const innerWidth = width - margin.left - margin.right;
             const innerHeight = height - margin.top - margin.bottom;
 
             const svg = d3.select("#chart-container")
                 .append("svg")
-                .attr("width", width)
-                .attr("height", height)
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .attr("preserveAspectRatio", "none")
                 .append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
             const x = d3.scaleBand()
                 .domain(data.map(d => d.mes))
                 .range([0, innerWidth])
-                .padding(0.2);
+                .padding(0.15);
 
             const y = d3.scaleLinear()
                 .domain([0, 100])
@@ -162,11 +200,11 @@
             svg.append("g")
                 .attr("class", "axis")
                 .attr("transform", `translate(0,${innerHeight})`)
-                .call(d3.axisBottom(x));
+                .call(d3.axisBottom(x).tickSize(5));
 
             svg.append("g")
                 .attr("class", "axis")
-                .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5));
+                .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5).tickSize(5));
 
             const processedData = data.map(d => {
                 const values = brands.map(brand => ({ brand, value: d[brand] }));
@@ -216,6 +254,7 @@
                         .attr("d", ribbonPath)
                         .attr("fill", colors[brand])
                         .attr("opacity", 0.8)
+                        .style("cursor", "pointer")
                         .on("mouseover", function() {
                             d3.select(this).attr("opacity", 1);
                             tooltip.style("opacity", 1);
@@ -237,14 +276,16 @@
                     if (!band) return;
                     
                     const xPos = x(month.mes);
+                    const rectHeight = Math.max(0, y(band.y0) - y(band.y1));
                     
                     svg.append("rect")
                         .attr("x", xPos)
                         .attr("y", y(band.y1))
                         .attr("width", barWidth)
-                        .attr("height", Math.max(0, y(band.y0) - y(band.y1)))
+                        .attr("height", rectHeight)
                         .attr("fill", colors[brand])
                         .attr("opacity", 0.8)
+                        .style("cursor", "pointer")
                         .on("mouseover", function() {
                             d3.select(this).attr("opacity", 1);
                             tooltip.style("opacity", 1);
@@ -260,28 +301,33 @@
                             tooltip.style("opacity", 0);
                         });
 
-                    if (brand === 'HONDA' && barWidth > 20) {
+                    if (brand === 'HONDA' && barWidth > 15 && rectHeight > 12) {
                         svg.append("text")
                             .attr("x", xPos + barWidth / 2)
-                            .attr("y", y(band.y1) - 4)
+                            .attr("y", y(band.y1) - 3)
                             .attr("text-anchor", "middle")
                             .attr("fill", colors[brand])
                             .attr("font-weight", "bold")
-                            .attr("font-size", "10px")
+                            .attr("font-size", "9px")
                             .text(band.value + "%");
                     }
                 });
             });
         }
 
-        const resizeObserver = new ResizeObserver(() => {
-            draw();
-        });
+        let resizeTimeout;
+        function handleResize() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(draw, 50);
+        }
 
+        const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(container);
 
         window.addEventListener('load', draw);
-        window.addEventListener('resize', draw);
+        window.addEventListener('resize', handleResize);
+        
+        setTimeout(draw, 100);
     </script>
 </body>
 </html>
