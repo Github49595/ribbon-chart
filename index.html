@@ -3,72 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Share - Ribbon Chart</title>
+    <title>Market Share Responsive</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
-        /* 1. Estructura Flexbox de Pantalla Completa */
+        /* 1. Forzar a la página a ocupar todo el IFrame sin scroll */
         html, body {
-            height: 100vh; /* Alto exacto del viewport del iframe */
-            width: 100vw;
+            height: 100%;
+            width: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Prohibido el scroll */
+            overflow: hidden;
             font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #ffffff;
             display: flex;
-            flex-direction: column; /* Apilar elementos verticalmente */
+            flex-direction: column;
         }
 
-        /* 2. Encabezado Fijo (No se encoge) */
+        /* 2. Encabezado Fijo */
         #header-area {
-            flex: 0 0 auto; /* Tamaño fijo basado en contenido */
+            flex: 0 0 auto;
             text-align: center;
-            padding: 10px 0 5px 0;
+            padding: 5px 0;
         }
-        h1 { margin: 0; font-size: 16px; color: #333; }
+        h1 { margin: 0; font-size: 14px; color: #333; }
 
-        /* 3. Área del Gráfico (Flexible) */
-        /* LA CLAVE: min-height: 0 permite que este div se encoja si es necesario */
+        /* 3. El contenedor del gráfico es "Elástico" */
         #chart-wrapper {
-            flex: 1 1 auto; 
-            min-height: 0; 
+            flex: 1; /* Ocupa todo el espacio sobrante */
             width: 100%;
             position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            min-height: 0; /* Crucial para Flexbox */
+            overflow: hidden;
         }
 
-        /* 4. Leyenda Fija (No se encoge) */
+        /* 4. El SVG se estira para llenar el wrapper automáticamente */
+        #ribbon-chart {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* 5. Leyenda Fija en la base */
         #legend-area {
             flex: 0 0 auto;
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 15px;
-            padding: 5px 10px 10px 10px;
+            gap: 10px;
+            padding: 5px;
+            background: #fff;
         }
 
-        /* Estilos generales D3 */
-        .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
-        .legend-color { width: 12px; height: 12px; border-radius: 2px; }
+        /* Estilos Gráficos */
+        .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+        .legend-color { width: 10px; height: 10px; border-radius: 2px; }
         .tooltip {
             position: absolute;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 8px 12px;
+            padding: 5px 8px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.2s;
-            z-index: 1000;
-            top: 0; left: 0;
+            z-index: 9999;
         }
-        .axis text { font-size: 10px; fill: #666; }
-        .axis line, .axis path { stroke: #ddd; }
-        .grid line { stroke: #f0f0f0; stroke-dasharray: 2,2; }
-        .ribbon { opacity: 0.8; transition: opacity 0.2s; }
+        .axis text { font-size: 9px; fill: #666; }
+        .axis line, .axis path { stroke: #e0e0e0; }
+        .grid line { stroke: #f5f5f5; }
+        .ribbon { opacity: 0.85; }
         .ribbon:hover { opacity: 1; }
     </style>
 </head>
@@ -83,7 +86,6 @@
     </div>
 
     <div id="legend-area"></div>
-    
     <div class="tooltip" id="tooltip"></div>
 
     <script>
@@ -108,7 +110,7 @@
             'AUTECO': '#9E9E9E', 'AKT': '#FF9800', 'HERO': '#795548', 'SYM': '#B0BEC5'
         };
 
-        // Renderizar Leyenda una sola vez
+        // Pintar Leyenda una sola vez
         const legendContainer = d3.select('#legend-area');
         brands.forEach(brand => {
             const item = legendContainer.append('div').attr('class', 'legend-item');
@@ -116,46 +118,42 @@
             item.append('span').text(brand);
         });
 
-        // --- FUNCIÓN DE DIBUJADO PRINCIPAL ---
+        // --- FUNCIÓN DE DIBUJADO ---
         function drawChart() {
-            // 1. Obtener el contenedor FLEXIBLE (No la ventana)
-            const container = document.getElementById('chart-wrapper');
+            // 1. Obtener referencia al SVG
+            const svg = d3.select('#ribbon-chart');
             
-            // 2. Medir el espacio disponible real dentro de ese div
-            const availableWidth = container.clientWidth;
-            const availableHeight = container.clientHeight;
+            // 2. Limpiar contenido anterior
+            svg.selectAll("*").remove();
 
-            // Si el contenedor colapsó a 0 (carga inicial), no hacer nada y esperar
-            if (availableWidth === 0 || availableHeight === 0) return;
+            // 3. MEDIR EL TAMAÑO REAL QUE EL CSS LE DIO AL SVG
+            // Esta es la clave: preguntamos al navegador cuánto mide ahora mismo
+            const boundingBox = svg.node().getBoundingClientRect();
+            const width = boundingBox.width;
+            const height = boundingBox.height;
 
-            // 3. Limpiar SVG previo
-            d3.select("#ribbon-chart").selectAll("*").remove();
+            // Si es muy pequeño (carga inicial fallida), abortar
+            if (width < 50 || height < 50) return;
 
-            // 4. Configurar márgenes dentro del SVG
-            const margin = { top: 10, right: 25, bottom: 20, left: 35 };
-            const width = availableWidth - margin.left - margin.right;
-            const height = availableHeight - margin.top - margin.bottom;
+            // 4. Definir márgenes internos para ejes
+            const margin = { top: 10, right: 10, bottom: 20, left: 30 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
 
-            // Seguridad por si los márgenes son mayores al espacio
-            if (width <= 0 || height <= 0) return;
-
-            // 5. Crear SVG con dimensiones exactas del div contenedor
-            const svg = d3.select('#ribbon-chart')
-                .attr('width', availableWidth)
-                .attr('height', availableHeight)
-                .append('g')
+            // Grupo principal
+            const g = svg.append('g')
                 .attr('transform', `translate(${margin.left},${margin.top})`);
 
-            // --- Lógica D3 ---
-            const x = d3.scaleBand().domain(data.map(d => d.mes)).range([0, width]).padding(0.2);
-            const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+            // --- ESCALAS D3 ---
+            const x = d3.scaleBand().domain(data.map(d => d.mes)).range([0, innerWidth]).padding(0.2);
+            const y = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
 
             // Grid y Ejes
-            svg.append('g').attr('class', 'grid').call(d3.axisLeft(y).tickSize(-width).tickFormat('').ticks(5));
-            svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x));
-            svg.append('g').attr('class', 'axis').call(d3.axisLeft(y).tickFormat(d => d + '%').ticks(5));
+            g.append('g').attr('class', 'grid').call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat('').ticks(5));
+            g.append('g').attr('class', 'axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
+            g.append('g').attr('class', 'axis').call(d3.axisLeft(y).tickFormat(d => d + '%').ticks(5));
 
-            // Procesamiento Datos
+            // Procesar Datos
             const processedData = data.map(d => {
                 const values = brands.map(brand => ({ brand, value: d[brand] }));
                 values.sort((a, b) => b.value - a.value);
@@ -170,63 +168,59 @@
             const barWidth = x.bandwidth();
             const tooltip = d3.select('#tooltip');
 
+            // Dibujar Cintas y Barras
             brands.forEach(brand => {
-                // Cintas
+                // Cintas curvas
                 for (let i = 0; i < processedData.length - 1; i++) {
                     const current = processedData[i];
                     const next = processedData[i + 1];
-                    const currentBand = current.bands.find(b => b.brand === brand);
-                    const nextBand = next.bands.find(b => b.brand === brand);
-                    if (!currentBand || !nextBand) continue;
+                    const cBand = current.bands.find(b => b.brand === brand);
+                    const nBand = next.bands.find(b => b.brand === brand);
+                    if (!cBand || !nBand) continue;
 
                     const x0 = x(current.mes);
                     const x1 = x(next.mes);
-                    const ribbonPath = `
-                        M ${x0},${y(currentBand.y0)} L ${x0 + barWidth},${y(currentBand.y0)} L ${x0 + barWidth},${y(currentBand.y1)} L ${x0},${y(currentBand.y1)} Z
-                        M ${x0 + barWidth},${y(currentBand.y0)}
-                        C ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(currentBand.y0)} ${x1 - (x1 - x0 - barWidth) / 2},${y(nextBand.y0)} ${x1},${y(nextBand.y0)}
-                        L ${x1},${y(nextBand.y1)}
-                        C ${x1 - (x1 - x0 - barWidth) / 2},${y(nextBand.y1)} ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(currentBand.y1)} ${x0 + barWidth},${y(currentBand.y1)} Z
-                    `;
-                    svg.append('path').attr('class', 'ribbon').attr('d', ribbonPath).attr('fill', colors[brand]).attr('stroke', 'none')
-                        .on('mousemove', (event) => {
-                            tooltip.style('opacity', 1).html(`<strong>${brand}</strong><br/>${current.mes}: ${currentBand.value}% → ${next.mes}: ${nextBand.value}%`)
-                                .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY - 10) + 'px');
-                        })
-                        .on('mouseout', () => tooltip.style('opacity', 0));
-                }
-                // Barras verticales
-                processedData.forEach((month) => {
-                    const band = month.bands.find(b => b.brand === brand);
-                    if (!band) return;
-                    const xPos = x(month.mes);
-                    svg.append('rect').attr('x', xPos).attr('y', y(band.y1)).attr('width', barWidth)
-                        .attr('height', Math.max(0, y(band.y0) - y(band.y1))).attr('fill', colors[brand]).attr('opacity', 0.9)
-                        .on('mousemove', (event) => {
-                            tooltip.style('opacity', 1).html(`<strong>${brand}</strong><br/>${month.mes}: ${band.value}%`)
-                                .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY - 10) + 'px');
-                        })
-                        .on('mouseout', () => tooltip.style('opacity', 0));
                     
-                    if (brand === 'HONDA' && band.value > 5) {
-                        svg.append('text').attr('x', xPos + barWidth / 2).attr('y', y(band.y1) - 4).attr('text-anchor', 'middle')
-                            .attr('fill', colors[brand]).attr('font-weight', 'bold').attr('font-size', '10px').text(band.value + '%');
+                    const path = `
+                        M ${x0},${y(cBand.y0)} L ${x0+barWidth},${y(cBand.y0)} L ${x0+barWidth},${y(cBand.y1)} L ${x0},${y(cBand.y1)} Z
+                        M ${x0+barWidth},${y(cBand.y0)} 
+                        C ${x0+barWidth + (x1-x0-barWidth)/2},${y(cBand.y0)} ${x1-(x1-x0-barWidth)/2},${y(nBand.y0)} ${x1},${y(nBand.y0)}
+                        L ${x1},${y(nBand.y1)}
+                        C ${x1-(x1-x0-barWidth)/2},${y(nBand.y1)} ${x0+barWidth + (x1-x0-barWidth)/2},${y(cBand.y1)} ${x0+barWidth},${y(cBand.y1)} Z
+                    `;
+                    g.append('path').attr('class', 'ribbon').attr('d', path).attr('fill', colors[brand]).attr('stroke', 'none')
+                     .on('mousemove', e => tooltip.style('opacity',1).html(`<strong>${brand}</strong><br/>${current.mes}: ${cBand.value}%`).style('left',(e.pageX+10)+'px').style('top',(e.pageY-10)+'px'))
+                     .on('mouseout', () => tooltip.style('opacity',0));
+                }
+                
+                // Barras verticales
+                processedData.forEach(m => {
+                    const b = m.bands.find(x => x.brand === brand);
+                    if(!b) return;
+                    g.append('rect').attr('x', x(m.mes)).attr('y', y(b.y1)).attr('width', barWidth).attr('height', Math.max(0, y(b.y0)-y(b.y1)))
+                     .attr('fill', colors[brand]).attr('opacity', 0.9)
+                     .on('mousemove', e => tooltip.style('opacity',1).html(`<strong>${brand}</strong><br/>${m.mes}: ${b.value}%`).style('left',(e.pageX+10)+'px').style('top',(e.pageY-10)+'px'))
+                     .on('mouseout', () => tooltip.style('opacity',0));
+                    
+                    // Etiqueta Honda
+                    if(brand==='HONDA' && b.value>5) {
+                        g.append('text').attr('x', x(m.mes)+barWidth/2).attr('y', y(b.y1)-2).attr('text-anchor', 'middle')
+                         .attr('fill', colors[brand]).attr('font-weight','bold').attr('font-size','8px').text(b.value+'%');
                     }
                 });
             });
         }
 
-        // --- OBSERVADOR DE REDIMENSIONAMIENTO (La parte crítica) ---
-        // Esto detecta si el DIV cambia de tamaño, no solo la ventana.
-        const resizeObserver = new ResizeObserver(entries => {
-            // Usamos requestAnimationFrame para evitar errores de bucle de redimensionamiento
-            window.requestAnimationFrame(() => {
-                drawChart();
-            });
-        });
+        // --- EVENTOS ---
+        // 1. Dibujar al cargar
+        window.addEventListener('load', drawChart);
+        
+        // 2. Redibujar al cambiar tamaño de la ventana (Power Apps resizing)
+        window.addEventListener('resize', drawChart);
 
-        // Comenzar a observar el contenedor principal
-        resizeObserver.observe(document.getElementById('chart-wrapper'));
+        // 3. Seguridad: Intentar dibujar de nuevo a los 500ms y 1s por si Power Apps animó la apertura
+        setTimeout(drawChart, 500);
+        setTimeout(drawChart, 1000);
 
     </script>
 </body>
