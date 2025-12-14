@@ -22,6 +22,7 @@
         body {
             display: flex;
             flex-direction: column;
+            border: 5px solid red;
         }
 
         #header {
@@ -208,7 +209,7 @@
 
             const processedData = data.map(d => {
                 const values = brands.map(brand => ({ brand, value: d[brand] }));
-                values.sort((a, b) => b.value - a.value);
+                values.sort((a, b) => a.value - b.value);
                 let cumulative = 0;
                 return {
                     mes: d.mes,
