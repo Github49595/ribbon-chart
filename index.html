@@ -84,7 +84,6 @@
       stroke-dasharray: 2,2;
     }
 
-    /* Solo para errores reales de carga/parseo */
     #error-message {
       display: none;
       padding: 10px 14px;
@@ -179,7 +178,7 @@
       return { data, brands, colors };
     }
 
-    // Normaliza cada mes a 100 y crea display entero (suma 100). Sin avisos/console de normalización.
+    // Normaliza a 100 y crea display entero (suma 100). Sin mensajes/avisos.
     function normalizeTo100(rawData, brands, tolerance = 0.0001) {
       const out = rawData.map(row => {
         const values = brands.map(b => ({ brand: b, raw: safeNumber(row[b]) }));
@@ -278,11 +277,10 @@
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "none");
 
-      // Grupo principal
       const g = svgRoot.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      // Defs: sombra negra para texto
+      // Defs: sombra para texto
       const defs = svgRoot.append("defs");
       const filter = defs.append("filter")
         .attr("id", "labelShadow")
@@ -303,7 +301,6 @@
         .domain([0, 100])
         .range([innerHeight, 0]);
 
-      // Grid + ejes
       g.append("g")
         .attr("class", "grid")
         .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(5))
@@ -318,7 +315,7 @@
         .attr("class", "axis")
         .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5).tickSize(5));
 
-      // Precalcular bandas por mes (snap último y1=100)
+      // Bandas por mes
       const processedData = chartData.map(d => {
         const values = brands.map(brand => ({
           brand,
@@ -343,7 +340,7 @@
         return { mes: d.mes, bands };
       });
 
-      // Layers
+      // Layers: cintas debajo, barras encima, labels arriba
       const ribbonsLayer = g.append("g");
       const barsLayer = g.append("g");
       const labelsLayer = g.append("g");
@@ -354,19 +351,16 @@
       };
       const tooltipOff = () => { tooltip.style("opacity", 0); };
 
-      const ribbonOpacity = 0.70;
-      const rectOpacity = 1.00; // CLAVE: elimina la “curva” por mezcla de transparencias
-      const rectStroke = "#FFFFFF"; // ayuda a “cortar” anti-aliasing
-      const rectStrokeW = 0.6;
+      const ribbonOpacity = 0.80;
+      const rectOpacity = 1.00;
 
-      // Helper: offset para que la cinta NO toque el borde de la columna
-      function gapInset(x0, x1, bw) {
-        const gap = Math.max(0, x1 - x0 - bw);
-        // inset dinámico: suficiente para separarla visualmente, sin romper cuando el gap es pequeño
-        return Math.max(0, Math.min(3, gap * 0.25));
+      // Overlap mínimo para que la cinta “toque” visualmente la barra sin dejar rendijas
+      function overlapPx() {
+        // 0.9px suele ser suficiente para cubrir anti-aliasing sin “invadir” visualmente
+        return 0.9;
       }
 
-      // 1) RIBBONS: solo en el gap (sin tocar columnas)
+      // 1) RIBBONS: conectan con las barras (sin gap), pero quedan “tapadas” en el borde por las barras opacas
       for (let i = 0; i < processedData.length - 1; i++) {
         const cur = processedData[i];
         const nxt = processedData[i + 1];
@@ -376,17 +370,18 @@
         if (x0 == null || x1 == null) continue;
 
         const bw = x.bandwidth();
+        const ov = overlapPx();
 
-        const inset = gapInset(x0, x1, bw);
-        const startX = x0 + bw + inset;
-        const endX = x1 - inset;
+        // Importante: extendemos un poquito la cinta dentro de cada barra (luego la barra la tapa).
+        const startX = x0 + bw - ov;
+        const endX = x1 + ov;
         if (endX <= startX) continue;
 
         const span = endX - startX;
         const c1 = startX + span / 2;
         const c2 = endX - span / 2;
 
-        // Orden de pintado por altura media (bottom -> top) para consistencia visual
+        // Pintado bottom->top para consistencia
         const connectors = brands.map(brand => {
           const cb = cur.bands.find(b => b.brand === brand);
           const nb = nxt.bands.find(b => b.brand === brand);
@@ -421,7 +416,7 @@
         });
       }
 
-      // 2) BARRAS (columnas) completamente opacas -> bordes rectos garantizados
+      // 2) BARRAS: totalmente opacas, sin stroke blanco (evita las líneas fuertes)
       processedData.forEach(month => {
         const xPos = x(month.mes);
         if (xPos == null) return;
@@ -441,8 +436,6 @@
             .attr("height", rectHeight)
             .attr("fill", colors[band.brand] || "#999")
             .attr("opacity", rectOpacity)
-            .attr("stroke", rectStroke)
-            .attr("stroke-width", rectStrokeW)
             .style("cursor", "pointer")
             .on("mouseover", function(event) {
               tooltipOn(`<strong>${band.brand}</strong><br/>${month.mes}: ${band.displayValue}%`);
