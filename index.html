@@ -196,8 +196,7 @@
 
       const fmtInt = d3.format(".0f");
       const fmtTip = d3.format(".1f");
-
-      function clamp100(v){ return Math.max(0, Math.min(100, v)); }
+      const clamp100 = (v)=>Math.max(0, Math.min(100, v));
 
       const processedData = chartData.map(d=>{
         const values = brands.map(brand=>{
@@ -211,14 +210,7 @@
         const bands = values.map(v=>{
           const start = cumulative;
           cumulative += v.value;
-          return {
-            brand: v.brand,
-            value: v.value,
-            dispInt: v.dispInt,
-            tip: v.tip,
-            y0: start,
-            y1: cumulative
-          };
+          return { brand: v.brand, value: v.value, dispInt: v.dispInt, tip: v.tip, y0: start, y1: cumulative };
         });
 
         return { mes: d.mes, bands };
@@ -226,6 +218,7 @@
 
       const ribbonsLayer = g.append("g");
       const barsLayer = g.append("g");
+      const outlinesLayer = g.append("g");
       const labelsLayer = g.append("g");
 
       const tooltipOn = (html)=>{ tooltip.style("opacity",1).html(html); };
@@ -235,6 +228,9 @@
       const ribbonOpacity = 0.80;
       const rectOpacity = 1.00;
       const ov = 0.9;
+
+      const outlineStroke = "rgba(255,255,255,0.40)";
+      const outlineWidth = 0.55;
 
       for(let i=0;i<processedData.length-1;i++){
         const cur = processedData[i];
@@ -323,7 +319,7 @@
           let fontSize = 11;
           if(rectHeight < 18) fontSize = 9;
           if(rectHeight < 12) fontSize = 8;
-          if(rectHeight < 8) fontSize = 7;
+          if(rectHeight < 8)  fontSize = 7;
 
           labelsLayer.append("text")
             .attr("x", xPos + bw/2)
@@ -341,6 +337,19 @@
             .style("pointer-events","none")
             .text(band.dispInt + "%");
         });
+
+        outlinesLayer.append("rect")
+          .attr("x", xPos)
+          .attr("y", 0)
+          .attr("width", bw)
+          .attr("height", innerHeight)
+          .attr("fill", "none")
+          .attr("stroke", outlineStroke)
+          .attr("stroke-width", outlineWidth)
+          .attr("stroke-linejoin", "round")
+          .attr("vector-effect", "non-scaling-stroke")
+          .attr("shape-rendering", "geometricPrecision")
+          .style("pointer-events","none");
       });
     }
 
