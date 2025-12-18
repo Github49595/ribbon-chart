@@ -6,97 +6,23 @@
   <title>Market Share Dynamic</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: "Segoe UI", sans-serif;
-      background: #fff;
-    }
-
-    body { display: flex; flex-direction: column; }
-
-    #header {
-      height: 35px;
-      text-align: center;
-      padding: 8px 0;
-      background: #fff;
-      flex-shrink: 0;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 14px;
-      color: #333;
-      font-weight: 600;
-    }
-
-    #chart-container {
-      flex: 1;
-      width: 100%;
-      position: relative;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    #chart-container svg {
-      display: block;
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    #legend {
-      height: 40px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 8px;
-      background: #fff;
-      flex-shrink: 0;
-    }
-
-    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; }
-    .legend-color { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
-
-    .tooltip {
-      position: fixed;
-      background: rgba(0,0,0,0.9);
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 11px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-      z-index: 9999;
-      white-space: nowrap;
-    }
-
-    .axis text { font-size: 9px; fill: #666; }
-    .axis line, .axis path { stroke: #ddd; }
-
-    .grid line {
-      stroke: #f0f0f0;
-      stroke-dasharray: 2,2;
-    }
-
-    #error-message {
-      display: none;
-      padding: 10px 14px;
-      text-align: center;
-      color: #b71c1c;
-      font-size: 12px;
-      background: #fff;
-      border-top: 1px solid #f3f3f3;
-      border-bottom: 1px solid #f3f3f3;
-    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:"Segoe UI",sans-serif;background:#fff}
+    body{display:flex;flex-direction:column}
+    #header{height:35px;text-align:center;padding:8px 0;background:#fff;flex-shrink:0}
+    h1{margin:0;font-size:14px;color:#333;font-weight:600}
+    #chart-container{flex:1;width:100%;position:relative;overflow:hidden;background:#fff}
+    #chart-container svg{display:block;width:100%!important;height:100%!important}
+    #legend{height:40px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px;padding:8px;background:#fff;flex-shrink:0}
+    .legend-item{display:flex;align-items:center;gap:5px;font-size:10px}
+    .legend-color{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+    .tooltip{position:fixed;background:rgba(0,0,0,.9);color:#fff;padding:8px 12px;border-radius:4px;font-size:11px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:9999;white-space:nowrap}
+    .axis text{font-size:9px;fill:#666}
+    .axis line,.axis path{stroke:#ddd}
+    .grid line{stroke:#f0f0f0;stroke-dasharray:2,2}
+    #error-message{display:none;padding:10px 14px;text-align:center;color:#b71c1c;font-size:12px;background:#fff;border-top:1px solid #f3f3f3;border-bottom:1px solid #f3f3f3}
   </style>
 </head>
-
 <body>
   <div id="header">
     <h1>Market Share por Mes (%)</h1>
@@ -133,33 +59,32 @@
     };
 
     const errorBox = document.getElementById('error-message');
-    function showError(msg) { errorBox.style.display = 'block'; errorBox.textContent = msg; }
-    function clearError() { errorBox.style.display = 'none'; errorBox.textContent = ''; }
+    function showError(msg){ errorBox.style.display='block'; errorBox.textContent=msg; }
+    function clearError(){ errorBox.style.display='none'; errorBox.textContent=''; }
 
-    function safeNumber(x) {
+    function safeNumber(x){
       const n = Number(x);
       return Number.isFinite(n) ? n : 0;
     }
 
-    function parseUrlParams() {
+    function parseUrlParams(){
       const urlParams = new URLSearchParams(window.location.search);
-
       const monthsParam = urlParams.get('months');
-      if (!monthsParam) return null;
+      if(!monthsParam) return null;
 
-      const months = monthsParam.split(',').map(m => m.trim()).filter(Boolean);
-      if (!months.length) return null;
+      const months = monthsParam.split(',').map(m=>m.trim()).filter(Boolean);
+      if(!months.length) return null;
 
-      const reserved = new Set(['months', 'colors', 'highlight']);
+      const reserved = new Set(['months','colors','highlight']);
       const brands = [];
-      for (const [key] of urlParams.entries()) {
-        if (!reserved.has(key) && !brands.includes(key)) brands.push(key);
+      for(const [key] of urlParams.entries()){
+        if(!reserved.has(key) && !brands.includes(key)) brands.push(key);
       }
-      if (!brands.length) return null;
+      if(!brands.length) return null;
 
-      const data = months.map((m, i) => {
-        const row = { mes: m };
-        brands.forEach(brand => {
+      const data = months.map((m,i)=>{
+        const row = { mes:m };
+        brands.forEach(brand=>{
           const raw = (urlParams.get(brand) || '').split(',');
           row[brand] = safeNumber(raw[i]);
         });
@@ -168,103 +93,58 @@
 
       const colorsParam = urlParams.get('colors');
       let colors = { ...defaultColors };
-      if (colorsParam) {
-        colorsParam.split('|').forEach(pair => {
-          const [brand, color] = pair.split(':');
-          if (brand && color) colors[brand] = color;
+      if(colorsParam){
+        colorsParam.split('|').forEach(pair=>{
+          const [brand,color] = pair.split(':');
+          if(brand && color) colors[brand]=color;
         });
       }
 
       return { data, brands, colors };
     }
 
-    // Normaliza a 100 y crea display entero (suma 100). Sin mensajes/avisos.
-    function normalizeTo100(rawData, brands, tolerance = 0.0001) {
-      const out = rawData.map(row => {
-        const values = brands.map(b => ({ brand: b, raw: safeNumber(row[b]) }));
-        const totalRaw = values.reduce((s, v) => s + v.raw, 0);
-
-        if (totalRaw <= tolerance) {
-          const zeroRow = { mes: row.mes };
-          brands.forEach(b => { zeroRow[b] = 0; zeroRow[`__d_${b}`] = 0; });
-          return zeroRow;
-        }
-
-        const scaled = values.map(v => ({ brand: v.brand, value: (v.raw / totalRaw) * 100 }));
-
-        const floors = scaled.map(v => {
-          const f = Math.floor(v.value);
-          return { brand: v.brand, floor: f, frac: v.value - f };
-        });
-
-        let sumFloor = floors.reduce((s, v) => s + v.floor, 0);
-        let remainder = 100 - sumFloor;
-
-        floors.sort((a, b) => b.frac - a.frac);
-
-        const displayMap = new Map();
-        floors.forEach((v, idx) => displayMap.set(v.brand, v.floor + (idx < remainder ? 1 : 0)));
-
-        const normRow = { mes: row.mes };
-        brands.forEach(b => {
-          normRow[b] = scaled.find(x => x.brand === b)?.value ?? 0;
-          normRow[`__d_${b}`] = displayMap.get(b) ?? 0;
-        });
-
-        return normRow;
-      });
-
-      return { data: out };
-    }
-
     let chartData, brands, colors;
 
-    try {
+    try{
       const parsed = parseUrlParams();
-      if (parsed) {
-        const normalized = normalizeTo100(parsed.data, parsed.brands);
-        chartData = normalized.data;
+      if(parsed){
+        chartData = parsed.data;
         brands = parsed.brands;
         colors = parsed.colors;
         clearError();
-      } else {
-        const b = ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM'];
-        const normalized = normalizeTo100(defaultData, b);
-        chartData = normalized.data;
-        brands = b;
+      }else{
+        chartData = defaultData;
+        brands = ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM'];
         colors = defaultColors;
         clearError();
       }
-    } catch (e) {
+    }catch(e){
       console.error(e);
       showError('Error al cargar datos. Mostrando datos de ejemplo.');
-      const b = ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM'];
-      const normalized = normalizeTo100(defaultData, b);
-      chartData = normalized.data;
-      brands = b;
+      chartData = defaultData;
+      brands = ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM'];
       colors = defaultColors;
     }
 
-    // Leyenda
     const legendDiv = d3.select("#legend");
     legendDiv.selectAll("*").remove();
-    brands.forEach(brand => {
-      const item = legendDiv.append("div").attr("class", "legend-item");
-      item.append("div").attr("class", "legend-color").style("background-color", colors[brand] || "#999");
+    brands.forEach(brand=>{
+      const item = legendDiv.append("div").attr("class","legend-item");
+      item.append("div").attr("class","legend-color").style("background-color", colors[brand] || "#999");
       item.append("span").text(brand);
     });
 
     const container = document.getElementById("chart-container");
     const tooltip = d3.select("#tooltip");
 
-    function draw() {
+    function draw(){
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
-      if (containerWidth < 120 || containerHeight < 120) return;
+      if(containerWidth < 120 || containerHeight < 120) return;
 
       d3.select("#chart-container").selectAll("*").remove();
 
-      const margin = { top: 10, right: 15, bottom: 20, left: 35 };
+      const margin = { top:10, right:15, bottom:20, left:35 };
       const width = containerWidth;
       const height = containerHeight;
       const innerWidth = width - margin.left - margin.right;
@@ -272,129 +152,123 @@
 
       const svgRoot = d3.select("#chart-container")
         .append("svg")
-        .attr("width", "100%")
-        .attr("height", "100%")
+        .attr("width","100%")
+        .attr("height","100%")
         .attr("viewBox", `0 0 ${width} ${height}`)
-        .attr("preserveAspectRatio", "none");
+        .attr("preserveAspectRatio","none");
+
+      const defs = svgRoot.append("defs");
+      const filter = defs.append("filter")
+        .attr("id","labelShadow")
+        .attr("x","-50%").attr("y","-50%")
+        .attr("width","200%").attr("height","200%");
+      filter.append("feDropShadow")
+        .attr("dx",0).attr("dy",0)
+        .attr("stdDeviation",1.2)
+        .attr("flood-color","#000")
+        .attr("flood-opacity",0.9);
 
       const g = svgRoot.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      // Defs: sombra para texto
-      const defs = svgRoot.append("defs");
-      const filter = defs.append("filter")
-        .attr("id", "labelShadow")
-        .attr("x", "-50%").attr("y", "-50%")
-        .attr("width", "200%").attr("height", "200%");
-      filter.append("feDropShadow")
-        .attr("dx", 0).attr("dy", 0)
-        .attr("stdDeviation", 1.2)
-        .attr("flood-color", "#000")
-        .attr("flood-opacity", 0.9);
-
       const x = d3.scaleBand()
-        .domain(chartData.map(d => d.mes))
+        .domain(chartData.map(d=>d.mes))
         .range([0, innerWidth])
         .padding(0.15);
 
       const y = d3.scaleLinear()
-        .domain([0, 100])
-        .range([innerHeight, 0]);
+        .domain([0,100])
+        .range([innerHeight,0]);
 
       g.append("g")
-        .attr("class", "grid")
+        .attr("class","grid")
         .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(5))
-        .style("opacity", 0.3);
+        .style("opacity",0.3);
 
       g.append("g")
-        .attr("class", "axis")
+        .attr("class","axis")
         .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x).tickSize(5));
 
       g.append("g")
-        .attr("class", "axis")
-        .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5).tickSize(5));
+        .attr("class","axis")
+        .call(d3.axisLeft(y).tickFormat(d=>d+"%").ticks(5).tickSize(5));
 
-      // Bandas por mes
-      const processedData = chartData.map(d => {
-        const values = brands.map(brand => ({
-          brand,
-          value: safeNumber(d[brand]),
-          displayValue: safeNumber(d[`__d_${brand}`])
-        }));
+      const fmtInt = d3.format(".0f");
+      const fmtTip = d3.format(".1f");
 
-        values.sort((a, b) => a.value - b.value);
+      function clamp100(v){ return Math.max(0, Math.min(100, v)); }
 
-        let cumulative = 0;
-        const bands = values.map(v => {
-          const start = cumulative;
-          cumulative += v.value;
-          return { brand: v.brand, value: v.value, displayValue: v.displayValue, y0: start, y1: cumulative };
+      const processedData = chartData.map(d=>{
+        const values = brands.map(brand=>{
+          const v = safeNumber(d[brand]);
+          return { brand, value: v, dispInt: Math.round(v), tip: fmtTip(v) };
         });
 
-        if (bands.length) {
-          bands[0].y0 = 0;
-          bands[bands.length - 1].y1 = 100;
-        }
+        values.sort((a,b)=>a.value-b.value);
+
+        let cumulative = 0;
+        const bands = values.map(v=>{
+          const start = cumulative;
+          cumulative += v.value;
+          return {
+            brand: v.brand,
+            value: v.value,
+            dispInt: v.dispInt,
+            tip: v.tip,
+            y0: start,
+            y1: cumulative
+          };
+        });
 
         return { mes: d.mes, bands };
       });
 
-      // Layers: cintas debajo, barras encima, labels arriba
       const ribbonsLayer = g.append("g");
       const barsLayer = g.append("g");
       const labelsLayer = g.append("g");
 
-      const tooltipOn = (html) => { tooltip.style("opacity", 1).html(html); };
-      const tooltipMove = (event) => {
-        tooltip.style("left", (event.clientX + 10) + "px").style("top", (event.clientY - 10) + "px");
-      };
-      const tooltipOff = () => { tooltip.style("opacity", 0); };
+      const tooltipOn = (html)=>{ tooltip.style("opacity",1).html(html); };
+      const tooltipMove = (event)=>{ tooltip.style("left",(event.clientX+10)+"px").style("top",(event.clientY-10)+"px"); };
+      const tooltipOff = ()=>{ tooltip.style("opacity",0); };
 
-      const ribbonOpacity = 0.60;
+      const ribbonOpacity = 0.80;
       const rectOpacity = 1.00;
+      const ov = 0.9;
 
-      // Overlap mínimo para que la cinta “toque” visualmente la barra sin dejar rendijas
-      function overlapPx() {
-        // 0.9px suele ser suficiente para cubrir anti-aliasing sin “invadir” visualmente
-        return 0.9;
-      }
-
-      // 1) RIBBONS: conectan con las barras (sin gap), pero quedan “tapadas” en el borde por las barras opacas
-      for (let i = 0; i < processedData.length - 1; i++) {
+      for(let i=0;i<processedData.length-1;i++){
         const cur = processedData[i];
-        const nxt = processedData[i + 1];
+        const nxt = processedData[i+1];
 
         const x0 = x(cur.mes);
         const x1 = x(nxt.mes);
-        if (x0 == null || x1 == null) continue;
+        if(x0 == null || x1 == null) continue;
 
         const bw = x.bandwidth();
-        const ov = overlapPx();
-
-        // Importante: extendemos un poquito la cinta dentro de cada barra (luego la barra la tapa).
         const startX = x0 + bw - ov;
         const endX = x1 + ov;
-        if (endX <= startX) continue;
+        if(endX <= startX) continue;
 
         const span = endX - startX;
-        const c1 = startX + span / 2;
-        const c2 = endX - span / 2;
+        const c1 = startX + span/2;
+        const c2 = endX - span/2;
 
-        // Pintado bottom->top para consistencia
-        const connectors = brands.map(brand => {
-          const cb = cur.bands.find(b => b.brand === brand);
-          const nb = nxt.bands.find(b => b.brand === brand);
-          if (!cb || !nb) return null;
-          return { brand, cb, nb, mid: ((cb.y0 + cb.y1 + nb.y0 + nb.y1) / 4) };
-        }).filter(Boolean).sort((a, b) => a.mid - b.mid);
+        const connectors = brands.map(brand=>{
+          const cb = cur.bands.find(b=>b.brand===brand);
+          const nb = nxt.bands.find(b=>b.brand===brand);
+          if(!cb || !nb) return null;
+          return { brand, cb, nb, mid: ((cb.y0+cb.y1+nb.y0+nb.y1)/4) };
+        }).filter(Boolean).sort((a,b)=>a.mid-b.mid);
 
-        connectors.forEach(({ brand, cb, nb }) => {
+        connectors.forEach(({brand,cb,nb})=>{
+          const cb0 = clamp100(cb.y0), cb1 = clamp100(cb.y1);
+          const nb0 = clamp100(nb.y0), nb1 = clamp100(nb.y1);
+
           const path = `
-            M ${startX},${y(cb.y0)}
-            C ${c1},${y(cb.y0)} ${c2},${y(nb.y0)} ${endX},${y(nb.y0)}
-            L ${endX},${y(nb.y1)}
-            C ${c2},${y(nb.y1)} ${c1},${y(cb.y1)} ${startX},${y(cb.y1)}
+            M ${startX},${y(cb0)}
+            C ${c1},${y(cb0)} ${c2},${y(nb0)} ${endX},${y(nb0)}
+            L ${endX},${y(nb1)}
+            C ${c2},${y(nb1)} ${c1},${y(cb1)} ${startX},${y(cb1)}
             Z
           `;
 
@@ -402,31 +276,30 @@
             .attr("d", path)
             .attr("fill", colors[brand] || "#999")
             .attr("opacity", ribbonOpacity)
-            .style("cursor", "pointer")
-            .on("mouseover", function(event) {
-              d3.select(this).attr("opacity", 1);
-              tooltipOn(`<strong>${brand}</strong><br/>${cur.mes}: ${cb.displayValue}% → ${nxt.mes}: ${nb.displayValue}%`);
+            .style("cursor","pointer")
+            .on("mouseover", function(event){
+              d3.select(this).attr("opacity",1);
+              tooltipOn(`<strong>${brand}</strong><br/>${cur.mes}: ${fmtInt(cb.value)}% → ${nxt.mes}: ${fmtInt(nb.value)}%`);
               tooltipMove(event);
             })
-            .on("mousemove", function(event) { tooltipMove(event); })
-            .on("mouseout", function() {
+            .on("mousemove", function(event){ tooltipMove(event); })
+            .on("mouseout", function(){
               d3.select(this).attr("opacity", ribbonOpacity);
               tooltipOff();
             });
         });
       }
 
-      // 2) BARRAS: totalmente opacas, sin stroke blanco (evita las líneas fuertes)
-      processedData.forEach(month => {
+      processedData.forEach(month=>{
         const xPos = x(month.mes);
-        if (xPos == null) return;
+        if(xPos == null) return;
 
         const bw = x.bandwidth();
-        const bandsSorted = [...month.bands].sort((a, b) => a.y0 - b.y0);
+        const bandsSorted = [...month.bands].sort((a,b)=>a.y0-b.y0);
 
-        bandsSorted.forEach(band => {
-          const yTop = y(band.y1);
-          const yBottom = y(band.y0);
+        bandsSorted.forEach(band=>{
+          const yTop = y(clamp100(band.y1));
+          const yBottom = y(clamp100(band.y0));
           const rectHeight = Math.max(0, yBottom - yTop);
 
           barsLayer.append("rect")
@@ -436,46 +309,43 @@
             .attr("height", rectHeight)
             .attr("fill", colors[band.brand] || "#999")
             .attr("opacity", rectOpacity)
-            .style("cursor", "pointer")
-            .on("mouseover", function(event) {
-              tooltipOn(`<strong>${band.brand}</strong><br/>${month.mes}: ${band.displayValue}%`);
+            .style("cursor","pointer")
+            .on("mouseover", function(event){
+              tooltipOn(`<strong>${band.brand}</strong><br/>${month.mes}: ${band.tip}%`);
               tooltipMove(event);
             })
-            .on("mousemove", function(event) { tooltipMove(event); })
-            .on("mouseout", function() { tooltipOff(); });
+            .on("mousemove", function(event){ tooltipMove(event); })
+            .on("mouseout", function(){ tooltipOff(); });
 
-          // Etiqueta: NO mostrar si displayValue == 0
-          if (band.displayValue <= 0) return;
-
-          const labelX = xPos + bw / 2;
-          const labelY = yTop + rectHeight / 2;
+          if(band.value <= 0) return;
+          if(band.dispInt <= 0) return;
 
           let fontSize = 11;
-          if (rectHeight < 18) fontSize = 9;
-          if (rectHeight < 12) fontSize = 8;
-          if (rectHeight < 8)  fontSize = 7;
+          if(rectHeight < 18) fontSize = 9;
+          if(rectHeight < 12) fontSize = 8;
+          if(rectHeight < 8) fontSize = 7;
 
           labelsLayer.append("text")
-            .attr("x", labelX)
-            .attr("y", labelY)
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .attr("font-weight", 800)
+            .attr("x", xPos + bw/2)
+            .attr("y", yTop + rectHeight/2)
+            .attr("text-anchor","middle")
+            .attr("dominant-baseline","middle")
+            .attr("font-weight",800)
             .attr("font-size", fontSize + "px")
-            .attr("fill", "#FFFFFF")
-            .attr("stroke", "rgba(0,0,0,0.95)")
-            .attr("stroke-width", 2.8)
-            .attr("paint-order", "stroke")
-            .attr("stroke-linejoin", "round")
-            .attr("filter", "url(#labelShadow)")
-            .style("pointer-events", "none")
-            .text(band.displayValue + "%");
+            .attr("fill","#FFFFFF")
+            .attr("stroke","rgba(0,0,0,0.95)")
+            .attr("stroke-width",2.8)
+            .attr("paint-order","stroke")
+            .attr("stroke-linejoin","round")
+            .attr("filter","url(#labelShadow)")
+            .style("pointer-events","none")
+            .text(band.dispInt + "%");
         });
       });
     }
 
     let resizeTimeout;
-    function handleResize() {
+    function handleResize(){
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(draw, 50);
     }
