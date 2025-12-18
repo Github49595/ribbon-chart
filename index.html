@@ -242,7 +242,7 @@
         // Aviso si el input venía lejos de 100 (solo informativo)
         const sumInput = values.reduce((s, v) => s + v.raw, 0);
         const delta = Math.abs(sumInput - 100);
-        //if (delta > 0.5) warnings.push(`Mes ${row.mes}: el input sumaba ${sumInput.toFixed(2)}; se normalizó a 100%.`);
+        if (delta > 0.5) warnings.push(`Mes ${row.mes}: el input sumaba ${sumInput.toFixed(2)}; se normalizó a 100%.`);
 
         return normRow;
       });
