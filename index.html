@@ -199,10 +199,7 @@
       return { data, brands, colors, highlight };
     }
 
-    /**
-     * Normaliza cada mes para que sume 100.
-     * Además calcula displayValue ENTERO por marca, garantizando que el display por mes también sume 100.
-     */
+    
     function normalizeTo100(rawData, brands, tolerance = 0.0001) {
       const warnings = [];
 
@@ -217,7 +214,7 @@
           return zeroRow;
         }
 
-        // Normalizado float (suma exacta 100, salvo error FP)
+       
         const scaled = values.map(v => {
           const norm = (v.raw / totalRaw) * 100;
           return { brand: v.brand, value: norm };
@@ -245,7 +242,7 @@
         // Aviso si el input venía lejos de 100 (solo informativo)
         const sumInput = values.reduce((s, v) => s + v.raw, 0);
         const delta = Math.abs(sumInput - 100);
-        if (delta > 0.5) warnings.push(`Mes ${row.mes}: el input sumaba ${sumInput.toFixed(2)}; se normalizó a 100%.`);
+        //if (delta > 0.5) warnings.push(`Mes ${row.mes}: el input sumaba ${sumInput.toFixed(2)}; se normalizó a 100%.`);
 
         return normRow;
       });
