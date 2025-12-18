@@ -1,416 +1,542 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Share Dynamic</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            font-family: 'Segoe UI', sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Share Dynamic</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
-            display: flex;
-            flex-direction: column;
-        }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Segoe UI", sans-serif;
+      background: #fff;
+    }
 
-        #header {
-            height: 35px;
-            text-align: center;
-            padding: 8px 0;
-            background: #fff;
-            flex-shrink: 0;
-        }
-        
-        h1 { 
-            margin: 0; 
-            font-size: 14px; 
-            color: #333; 
-            font-weight: 600; 
-        }
+    body { display: flex; flex-direction: column; }
 
-        #chart-container {
-            flex: 1;
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-            background: #fff;
-        }
-        
-        #chart-container svg {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
-        }
+    #header {
+      height: 35px;
+      text-align: center;
+      padding: 8px 0;
+      background: #fff;
+      flex-shrink: 0;
+    }
 
-        #legend {
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 8px;
-            background: #fff;
-            flex-shrink: 0;
-        }
-        
-        .legend-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 5px; 
-            font-size: 10px; 
-        }
-        
-        .legend-color { 
-            width: 12px; 
-            height: 12px; 
-            border-radius: 2px; 
-            flex-shrink: 0;
-        }
-        
-        .tooltip {
-            position: fixed;
-            background: rgba(0,0,0,0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 11px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 9999;
-            white-space: nowrap;
-        }
-        
-        .axis text { 
-            font-size: 9px; 
-            fill: #666; 
-        }
-        
-        .axis line, .axis path { 
-            stroke: #ddd; 
-        }
-        
-        .grid line {
-            stroke: #f0f0f0;
-            stroke-dasharray: 2,2;
-        }
+    h1 {
+      margin: 0;
+      font-size: 14px;
+      color: #333;
+      font-weight: 600;
+    }
 
-        #error-message {
-            display: none;
-            padding: 20px;
-            text-align: center;
-            color: #d32f2f;
-            font-size: 14px;
-        }
-    </style>
+    #chart-container {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    #chart-container svg {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    #legend {
+      height: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 8px;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: rgba(0,0,0,0.9);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 9999;
+      white-space: nowrap;
+    }
+
+    .axis text { font-size: 9px; fill: #666; }
+    .axis line, .axis path { stroke: #ddd; }
+
+    .grid line {
+      stroke: #f0f0f0;
+      stroke-dasharray: 2,2;
+    }
+
+    #error-message {
+      display: none;
+      padding: 10px 14px;
+      text-align: center;
+      color: #b71c1c;
+      font-size: 12px;
+      background: #fff;
+      border-top: 1px solid #f3f3f3;
+      border-bottom: 1px solid #f3f3f3;
+    }
+  </style>
 </head>
+
 <body>
-    <div id="header">
-        <h1>Market Share por Mes (%)</h1>
-    </div>
+  <div id="header">
+    <h1>Market Share por Mes (%)</h1>
+  </div>
 
-    <div id="error-message"></div>
-    <div id="chart-container"></div>
-    <div id="legend"></div>
-    <div id="tooltip" class="tooltip"></div>
+  <div id="error-message"></div>
+  <div id="chart-container"></div>
+  <div id="legend"></div>
+  <div id="tooltip" class="tooltip"></div>
 
-    <script>
-        const defaultData = [
-            { mes: 'ENE', SUZUKI: 26, HONDA: 26, YAMAHA: 15, AUTECO: 12, AKT: 8, HERO: 7, SYM: 6 },
-            { mes: 'FEB', SUZUKI: 26, HONDA: 23, YAMAHA: 17, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
-            { mes: 'MAR', SUZUKI: 23, HONDA: 27, YAMAHA: 16, AUTECO: 12, AKT: 9, HERO: 7, SYM: 6 },
-            { mes: 'ABR', SUZUKI: 23, HONDA: 27, YAMAHA: 16, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
-            { mes: 'MAY', SUZUKI: 27, HONDA: 23, YAMAHA: 15, AUTECO: 13, AKT: 10, HERO: 6, SYM: 6 },
-            { mes: 'JUN', SUZUKI: 21, HONDA: 27, YAMAHA: 17, AUTECO: 13, AKT: 10, HERO: 6, SYM: 6 },
-            { mes: 'JUL', SUZUKI: 25, HONDA: 23, YAMAHA: 16, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
-            { mes: 'AGO', SUZUKI: 23, HONDA: 24, YAMAHA: 17, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
-            { mes: 'SEP', SUZUKI: 23, HONDA: 24, YAMAHA: 17, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
-            { mes: 'OCT', SUZUKI: 24, HONDA: 23, YAMAHA: 17, AUTECO: 14, AKT: 10, HERO: 6, SYM: 6 },
-            { mes: 'NOV', SUZUKI: 24, HONDA: 24, YAMAHA: 16, AUTECO: 14, AKT: 10, HERO: 6, SYM: 6 }
-        ];
+  <script>
+    const defaultData = [
+      { mes: 'ENE', SUZUKI: 26, HONDA: 26, YAMAHA: 15, AUTECO: 12, AKT: 8, HERO: 7, SYM: 6 },
+      { mes: 'FEB', SUZUKI: 26, HONDA: 23, YAMAHA: 17, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
+      { mes: 'MAR', SUZUKI: 23, HONDA: 27, YAMAHA: 16, AUTECO: 12, AKT: 9, HERO: 7, SYM: 6 },
+      { mes: 'ABR', SUZUKI: 23, HONDA: 27, YAMAHA: 16, AUTECO: 13, AKT: 9, HERO: 6, SYM: 6 },
+      { mes: 'MAY', SUZUKI: 27, HONDA: 23, YAMAHA: 15, AUTECO: 13, AKT: 10, HERO: 6, SYM: 6 },
+      { mes: 'JUN', SUZUKI: 21, HONDA: 27, YAMAHA: 17, AUTECO: 13, AKT: 10, HERO: 6, SYM: 6 },
+      { mes: 'JUL', SUZUKI: 25, HONDA: 23, YAMAHA: 16, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
+      { mes: 'AGO', SUZUKI: 23, HONDA: 24, YAMAHA: 17, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
+      { mes: 'SEP', SUZUKI: 23, HONDA: 24, YAMAHA: 17, AUTECO: 13, AKT: 11, HERO: 6, SYM: 6 },
+      { mes: 'OCT', SUZUKI: 24, HONDA: 23, YAMAHA: 17, AUTECO: 14, AKT: 10, HERO: 6, SYM: 6 },
+      { mes: 'NOV', SUZUKI: 24, HONDA: 24, YAMAHA: 16, AUTECO: 14, AKT: 10, HERO: 6, SYM: 6 }
+    ];
 
-        const defaultColors = {
-            'SUZUKI': '#FFFF00',
-            'HONDA': '#FF0000',
-            'YAMAHA': '#0066FF',
-            'AUTECO': '#9E9E9E',
-            'AKT': '#FF7B00',
-            'HERO': '#573B92',
-            'SYM': '#ADADAD'
-        };
+    const defaultColors = {
+      'SUZUKI': '#FFFF00',
+      'HONDA':  '#FF0000',
+      'YAMAHA': '#0066FF',
+      'AUTECO': '#9E9E9E',
+      'AKT':    '#FF7B00',
+      'HERO':   '#573B92',
+      'SYM':    '#ADADAD'
+    };
 
-        function parseUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            const monthsParam = urlParams.get('months');
-            if (!monthsParam) return null;
+    const errorBox = document.getElementById('error-message');
 
-            const months = monthsParam.split(',');
-            const data = [];
-            const brands = [];
+    function showMessage(msg) {
+      errorBox.style.display = 'block';
+      errorBox.textContent = msg;
+    }
 
-            for (const [key, value] of urlParams.entries()) {
-                if (key !== 'months' && key !== 'colors' && key !== 'highlight') {
-                    brands.push(key);
-                }
-            }
+    function clearMessage() {
+      errorBox.style.display = 'none';
+      errorBox.textContent = '';
+    }
 
-            for (let i = 0; i < months.length; i++) {
-                const monthData = { mes: months[i].trim() };
-                brands.forEach(brand => {
-                    const values = urlParams.get(brand).split(',');
-                    monthData[brand] = parseFloat(values[i]) || 0;
-                });
-                data.push(monthData);
-            }
+    function safeNumber(x) {
+      const n = Number(x);
+      return Number.isFinite(n) ? n : 0;
+    }
 
-            const colorsParam = urlParams.get('colors');
-            let colors = { ...defaultColors };
-            if (colorsParam) {
-                const colorPairs = colorsParam.split('|');
-                colorPairs.forEach(pair => {
-                    const [brand, color] = pair.split(':');
-                    if (brand && color) colors[brand] = color;
-                });
-            }
+    function parseUrlParams() {
+      const urlParams = new URLSearchParams(window.location.search);
 
-            const highlightParam = urlParams.get('highlight');
-            const highlight = highlightParam ? highlightParam.toUpperCase() : 'HONDA';
+      const monthsParam = urlParams.get('months');
+      if (!monthsParam) return null;
 
-            return { data, brands, colors, highlight };
-        }
+      const months = monthsParam.split(',').map(m => m.trim()).filter(Boolean);
+      if (months.length === 0) return null;
 
-        let chartData, brands, colors, highlightBrand;
+      const reserved = new Set(['months', 'colors', 'highlight']);
+      const brands = [];
+      for (const [key] of urlParams.entries()) {
+        if (!reserved.has(key) && !brands.includes(key)) brands.push(key);
+      }
 
-        try {
-            const parsed = parseUrlParams();
-            if (parsed && parsed.data.length > 0) {
-                chartData = parsed.data;
-                brands = parsed.brands;
-                colors = parsed.colors;
-                highlightBrand = parsed.highlight;
-            } else {
-                chartData = defaultData;
-                brands = ['SUZUKI', 'HONDA', 'YAMAHA', 'AUTECO', 'AKT', 'HERO', 'SYM'];
-                colors = defaultColors;
-                highlightBrand = 'HONDA';
-            }
-        } catch (error) {
-            console.error('Error parsing URL params:', error);
-            document.getElementById('error-message').style.display = 'block';
-            document.getElementById('error-message').textContent = 'Error al cargar los datos. Mostrando datos de ejemplo.';
-            chartData = defaultData;
-            brands = ['SUZUKI', 'HONDA', 'YAMAHA', 'AUTECO', 'AKT', 'HERO', 'SYM'];
-            colors = defaultColors;
-            highlightBrand = 'HONDA';
-        }
-
-        const legendDiv = d3.select("#legend");
+      const data = months.map((m, i) => {
+        const row = { mes: m };
         brands.forEach(brand => {
-            const item = legendDiv.append("div").attr("class", "legend-item");
-            item.append("div").attr("class", "legend-color").style("background-color", colors[brand] || '#999');
-            item.append("span").text(brand);
+          const raw = (urlParams.get(brand) || '').split(',');
+          row[brand] = safeNumber(raw[i]); // si viene corto o vacío => 0
+        });
+        return row;
+      });
+
+      const colorsParam = urlParams.get('colors');
+      let colors = { ...defaultColors };
+      if (colorsParam) {
+        colorsParam.split('|').forEach(pair => {
+          const [brand, color] = pair.split(':');
+          if (brand && color) colors[brand] = color;
+        });
+      }
+
+      const highlightParam = urlParams.get('highlight');
+      const highlight = (highlightParam ? highlightParam : 'HONDA').toUpperCase();
+
+      return { data, brands, colors, highlight };
+    }
+
+    /**
+     * Normaliza cada mes para que sume 100.
+     * Además calcula displayValue ENTERO por marca, garantizando que el display por mes también sume 100.
+     */
+    function normalizeTo100(rawData, brands, tolerance = 0.0001) {
+      const warnings = [];
+
+      const out = rawData.map(row => {
+        const values = brands.map(b => ({ brand: b, raw: safeNumber(row[b]) }));
+        const totalRaw = values.reduce((s, v) => s + v.raw, 0);
+
+        if (totalRaw <= tolerance) {
+          warnings.push(`Mes ${row.mes}: total 0 (o inválido). Se graficará en 0%.`);
+          const zeroRow = { mes: row.mes, __meta: { totalRaw, normalized: true, displaySum: 0 } };
+          brands.forEach(b => { zeroRow[b] = 0; zeroRow[`__d_${b}`] = 0; });
+          return zeroRow;
+        }
+
+        // Normalizado float (suma exacta 100, salvo error FP)
+        const scaled = values.map(v => {
+          const norm = (v.raw / totalRaw) * 100;
+          return { brand: v.brand, value: norm };
         });
 
-        const container = document.getElementById("chart-container");
-        const tooltip = d3.select("#tooltip");
+        // Display entero que suma 100 (método mayor residuo)
+        const floors = scaled.map(v => ({ brand: v.brand, floor: Math.floor(v.value), frac: v.value - Math.floor(v.value) }));
+        let sumFloor = floors.reduce((s, v) => s + v.floor, 0);
+        let remainder = 100 - sumFloor;
 
-        function draw() {
-            const containerWidth = container.clientWidth;
-            const containerHeight = container.clientHeight;
+        floors.sort((a, b) => b.frac - a.frac);
+        const displayMap = new Map();
+        floors.forEach((v, idx) => {
+          const add = idx < remainder ? 1 : 0;
+          displayMap.set(v.brand, v.floor + add);
+        });
 
-            if (containerWidth < 100 || containerHeight < 100) return;
+        const normRow = { mes: row.mes, __meta: { totalRaw, normalized: true, displaySum: 100 } };
+        brands.forEach(b => {
+          const v = scaled.find(x => x.brand === b)?.value ?? 0;
+          normRow[b] = v;
+          normRow[`__d_${b}`] = displayMap.get(b) ?? 0;
+        });
 
-            d3.select("#chart-container").selectAll("*").remove();
+        // Aviso si el input venía lejos de 100 (solo informativo)
+        const sumInput = values.reduce((s, v) => s + v.raw, 0);
+        const delta = Math.abs(sumInput - 100);
+        if (delta > 0.5) warnings.push(`Mes ${row.mes}: el input sumaba ${sumInput.toFixed(2)}; se normalizó a 100%.`);
 
-            const margin = { 
-                top: 10, 
-                right: 15, 
-                bottom: 20, 
-                left: 35 
-            };
-            
-            const width = containerWidth;
-            const height = containerHeight;
-            const innerWidth = width - margin.left - margin.right;
-            const innerHeight = height - margin.top - margin.bottom;
+        return normRow;
+      });
 
-            const svg = d3.select("#chart-container")
-                .append("svg")
-                .attr("width", "100%")
-                .attr("height", "100%")
-                .attr("viewBox", `0 0 ${width} ${height}`)
-                .attr("preserveAspectRatio", "none")
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
+      return { data: out, warnings };
+    }
 
-            const x = d3.scaleBand()
-                .domain(chartData.map(d => d.mes))
-                .range([0, innerWidth])
-                .padding(0.15);
+    let chartData, brands, colors, highlightBrand;
 
-            const y = d3.scaleLinear()
-                .domain([0, 100])
-                .range([innerHeight, 0]);
+    try {
+      const parsed = parseUrlParams();
+      if (parsed && parsed.data.length > 0 && parsed.brands.length > 0) {
+        const normalized = normalizeTo100(parsed.data, parsed.brands);
+        chartData = normalized.data;
+        brands = parsed.brands;
+        colors = parsed.colors;
+        highlightBrand = parsed.highlight;
 
-            svg.append("g")
-                .attr("class", "grid")
-                .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(5))
-                .style("opacity", 0.3);
-
-            svg.append("g")
-                .attr("class", "axis")
-                .attr("transform", `translate(0,${innerHeight})`)
-                .call(d3.axisBottom(x).tickSize(5));
-
-            svg.append("g")
-                .attr("class", "axis")
-                .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5).tickSize(5));
-
-            const processedData = chartData.map(d => {
-                const values = brands.map(brand => ({ brand, value: d[brand] || 0 }));
-                values.sort((a, b) => a.value - b.value);
-                
-                let cumulative = 0;
-                const bands = values.map((v, idx) => {
-                    const start = cumulative;
-                    cumulative += v.value;
-                    return { 
-                        brand: v.brand, 
-                        value: v.value,
-                        displayValue: Math.round(v.value),
-                        y0: start, 
-                        y1: cumulative 
-                    };
-                });
-                
-                return { mes: d.mes, bands };
-            });
-
-            const barWidth = x.bandwidth();
-
-            brands.forEach(brand => {
-                for (let i = 0; i < processedData.length - 1; i++) {
-                    const current = processedData[i];
-                    const next = processedData[i + 1];
-                    const cb = current.bands.find(b => b.brand === brand);
-                    const nb = next.bands.find(b => b.brand === brand);
-                    
-                    if (!cb || !nb) continue;
-
-                    const x0 = x(current.mes);
-                    const x1 = x(next.mes);
-                    const ribbonPath = `
-                        M ${x0},${y(cb.y0)}
-                        L ${x0 + barWidth},${y(cb.y0)}
-                        L ${x0 + barWidth},${y(cb.y1)}
-                        L ${x0},${y(cb.y1)}
-                        Z
-                        M ${x0 + barWidth},${y(cb.y0)}
-                        C ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(cb.y0)}
-                          ${x1 - (x1 - x0 - barWidth) / 2},${y(nb.y0)}
-                          ${x1},${y(nb.y0)}
-                        L ${x1},${y(nb.y1)}
-                        C ${x1 - (x1 - x0 - barWidth) / 2},${y(nb.y1)}
-                          ${x0 + barWidth + (x1 - x0 - barWidth) / 2},${y(cb.y1)}
-                          ${x0 + barWidth},${y(cb.y1)}
-                        Z
-                    `;
-                    
-                    svg.append("path")
-                        .attr("d", ribbonPath)
-                        .attr("fill", colors[brand] || '#999')
-                        .attr("opacity", 0.8)
-                        .style("cursor", "pointer")
-                        .on("mouseover", function() {
-                            d3.select(this).attr("opacity", 1);
-                            tooltip.style("opacity", 1);
-                        })
-                        .on("mousemove", function(event) {
-                            tooltip
-                                .html(`<strong>${brand}</strong><br/>${current.mes}: ${cb.displayValue}% → ${next.mes}: ${nb.displayValue}%`)
-                                .style("left", (event.clientX + 10) + "px")
-                                .style("top", (event.clientY - 10) + "px");
-                        })
-                        .on("mouseout", function() {
-                            d3.select(this).attr("opacity", 0.8);
-                            tooltip.style("opacity", 0);
-                        });
-                }
-
-                processedData.forEach(month => {
-                    const band = month.bands.find(b => b.brand === brand);
-                    if (!band) return;
-                    
-                    const xPos = x(month.mes);
-                    const rectHeight = Math.max(0, y(band.y0) - y(band.y1));
-                    
-                    svg.append("rect")
-                        .attr("x", xPos)
-                        .attr("y", y(band.y1))
-                        .attr("width", barWidth)
-                        .attr("height", rectHeight)
-                        .attr("fill", colors[brand] || '#999')
-                        .attr("opacity", 0.8)
-                        .style("cursor", "pointer")
-                        .on("mouseover", function() {
-                            d3.select(this).attr("opacity", 1);
-                            tooltip.style("opacity", 1);
-                        })
-                        .on("mousemove", function(event) {
-                            tooltip
-                                .html(`<strong>${brand}</strong><br/>${month.mes}: ${band.displayValue}%`)
-                                .style("left", (event.clientX + 10) + "px")
-                                .style("top", (event.clientY - 10) + "px");
-                        })
-                        .on("mouseout", function() {
-                            d3.select(this).attr("opacity", 0.8);
-                            tooltip.style("opacity", 0);
-                        });
-
-                    if (brand === highlightBrand && barWidth > 15 && rectHeight > 15) {
-                        const labelY = y(band.y1) + rectHeight / 2;
-                        
-                        svg.append("text")
-                            .attr("x", xPos + barWidth / 2)
-                            .attr("y", labelY)
-                            .attr("text-anchor", "middle")
-                            .attr("dominant-baseline", "middle")
-                            .attr("fill", "#FFFFFF")
-                            .attr("font-weight", "bold")
-                            .attr("font-size", "11px")
-                            .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
-                            .text(band.displayValue + "%");
-                    }
-                });
-            });
+        if (normalized.warnings.length) {
+          showMessage(normalized.warnings.slice(0, 2).join(' | '));
+        } else {
+          clearMessage();
         }
+      } else {
+        const normalized = normalizeTo100(defaultData, ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM']);
+        chartData = normalized.data;
+        brands = ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM'];
+        colors = defaultColors;
+        highlightBrand = 'HONDA';
+        clearMessage();
+      }
+    } catch (e) {
+      console.error(e);
+      showMessage('Error al cargar datos. Mostrando datos de ejemplo normalizados.');
+      const normalized = normalizeTo100(defaultData, ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM']);
+      chartData = normalized.data;
+      brands = ['SUZUKI','HONDA','YAMAHA','AUTECO','AKT','HERO','SYM'];
+      colors = defaultColors;
+      highlightBrand = 'HONDA';
+    }
 
-        let resizeTimeout;
-        function handleResize() {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(draw, 50);
+    // Leyenda
+    const legendDiv = d3.select("#legend");
+    legendDiv.selectAll("*").remove();
+    brands.forEach(brand => {
+      const item = legendDiv.append("div").attr("class", "legend-item");
+      item.append("div")
+        .attr("class", "legend-color")
+        .style("background-color", colors[brand] || "#999");
+      item.append("span").text(brand);
+    });
+
+    const container = document.getElementById("chart-container");
+    const tooltip = d3.select("#tooltip");
+
+    function draw() {
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      if (containerWidth < 120 || containerHeight < 120) return;
+
+      d3.select("#chart-container").selectAll("*").remove();
+
+      const margin = { top: 10, right: 15, bottom: 20, left: 35 };
+      const width = containerWidth;
+      const height = containerHeight;
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      const svgRoot = d3.select("#chart-container")
+        .append("svg")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "none");
+
+      // Defs para sombra de texto (contraste en fondos claros)
+      const defs = svgRoot.append("defs");
+      const filter = defs.append("filter")
+        .attr("id", "labelShadow")
+        .attr("x", "-50%")
+        .attr("y", "-50%")
+        .attr("width", "200%")
+        .attr("height", "200%");
+      filter.append("feDropShadow")
+        .attr("dx", 0)
+        .attr("dy", 0)
+        .attr("stdDeviation", 1.2)
+        .attr("flood-color", "#000")
+        .attr("flood-opacity", 0.9);
+
+      const svg = svgRoot.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleBand()
+        .domain(chartData.map(d => d.mes))
+        .range([0, innerWidth])
+        .padding(0.15);
+
+      const y = d3.scaleLinear()
+        .domain([0, 100])
+        .range([innerHeight, 0]);
+
+      // Grid + ejes
+      svg.append("g")
+        .attr("class", "grid")
+        .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(5))
+        .style("opacity", 0.3);
+
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x).tickSize(5));
+
+      svg.append("g")
+        .attr("class", "axis")
+        .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5).tickSize(5));
+
+      // Construcción de bandas por mes (normalizado)
+      const processedData = chartData.map(d => {
+        const values = brands.map(brand => ({
+          brand,
+          value: safeNumber(d[brand]),
+          displayValue: safeNumber(d[`__d_${brand}`])
+        }));
+
+        // Orden por valor para formar bandas (ribbon chart)
+        values.sort((a, b) => a.value - b.value);
+
+        let cumulative = 0;
+        const bands = values.map(v => {
+          const start = cumulative;
+          cumulative += v.value;
+          return {
+            brand: v.brand,
+            value: v.value,
+            displayValue: v.displayValue,
+            y0: start,
+            y1: cumulative
+          };
+        });
+
+        return { mes: d.mes, bands };
+      });
+
+      const barWidth = x.bandwidth();
+
+      function onOver(sel) {
+        sel.attr("opacity", 1);
+        tooltip.style("opacity", 1);
+      }
+      function onOut(sel, baseOpacity) {
+        sel.attr("opacity", baseOpacity);
+        tooltip.style("opacity", 0);
+      }
+
+      // 1) Ribbons (entre meses)
+      brands.forEach(brand => {
+        for (let i = 0; i < processedData.length - 1; i++) {
+          const current = processedData[i];
+          const next = processedData[i + 1];
+          const cb = current.bands.find(b => b.brand === brand);
+          const nb = next.bands.find(b => b.brand === brand);
+          if (!cb || !nb) continue;
+
+          const x0 = x(current.mes);
+          const x1 = x(next.mes);
+          const gap = Math.max(0, x1 - x0 - barWidth);
+          const c1 = x0 + barWidth + gap / 2;
+          const c2 = x1 - gap / 2;
+
+          const ribbonPath = `
+            M ${x0},${y(cb.y0)}
+            L ${x0 + barWidth},${y(cb.y0)}
+            L ${x0 + barWidth},${y(cb.y1)}
+            L ${x0},${y(cb.y1)}
+            Z
+            M ${x0 + barWidth},${y(cb.y0)}
+            C ${c1},${y(cb.y0)} ${c2},${y(nb.y0)} ${x1},${y(nb.y0)}
+            L ${x1},${y(nb.y1)}
+            C ${c2},${y(nb.y1)} ${c1},${y(cb.y1)} ${x0 + barWidth},${y(cb.y1)}
+            Z
+          `;
+
+          const baseOpacity = (brand === highlightBrand) ? 0.95 : 0.80;
+
+          svg.append("path")
+            .attr("d", ribbonPath)
+            .attr("fill", colors[brand] || "#999")
+            .attr("opacity", baseOpacity)
+            .style("cursor", "pointer")
+            .on("mouseover", function() { onOver(d3.select(this)); })
+            .on("mousemove", function(event) {
+              tooltip
+                .html(
+                  `<strong>${brand}</strong><br/>` +
+                  `${current.mes}: ${cb.displayValue}% → ${next.mes}: ${nb.displayValue}%`
+                )
+                .style("left", (event.clientX + 10) + "px")
+                .style("top", (event.clientY - 10) + "px");
+            })
+            .on("mouseout", function() { onOut(d3.select(this), baseOpacity); });
         }
+      });
 
-        const resizeObserver = new ResizeObserver(handleResize);
-        resizeObserver.observe(container);
+      // 2) Rectángulos por mes + etiquetas para TODAS las marcas
+      // (se dibujan después para asegurar que el último mes quede siempre visible)
+      brands.forEach(brand => {
+        processedData.forEach(month => {
+          const band = month.bands.find(b => b.brand === brand);
+          if (!band) return;
 
-        window.addEventListener('load', draw);
-        window.addEventListener('resize', handleResize);
-        
-        setTimeout(draw, 100);
-    </script>
+          const xPos = x(month.mes);
+          const yTop = y(band.y1);
+          const yBottom = y(band.y0);
+          const rectHeight = Math.max(0, yBottom - yTop);
+
+          const baseOpacity = (brand === highlightBrand) ? 0.95 : 0.85;
+
+          svg.append("rect")
+            .attr("x", xPos)
+            .attr("y", yTop)
+            .attr("width", barWidth)
+            .attr("height", rectHeight)
+            .attr("fill", colors[brand] || "#999")
+            .attr("opacity", baseOpacity)
+            .style("cursor", "pointer")
+            .on("mouseover", function() { onOver(d3.select(this)); })
+            .on("mousemove", function(event) {
+              tooltip
+                .html(`<strong>${brand}</strong><br/>${month.mes}: ${band.displayValue}%`)
+                .style("left", (event.clientX + 10) + "px")
+                .style("top", (event.clientY - 10) + "px");
+            })
+            .on("mouseout", function() { onOut(d3.select(this), baseOpacity); });
+
+          // Etiqueta SIEMPRE (todas las marcas)
+          const labelText = `${band.displayValue}%`;
+          const labelX = xPos + (barWidth / 2);
+          const labelY = yTop + (rectHeight / 2);
+
+          // Ajuste de tamaño según altura disponible
+          let fontSize = 11;
+          if (rectHeight < 18) fontSize = 9;
+          if (rectHeight < 12) fontSize = 8;
+          if (rectHeight < 8)  fontSize = 7;
+
+          svg.append("text")
+            .attr("x", labelX)
+            .attr("y", labelY)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .attr("font-weight", 800)
+            .attr("font-size", fontSize + "px")
+            .attr("fill", "#FFFFFF")
+            // borde negro + sombra negra (máximo contraste incluso en amarillos/claros)
+            .attr("stroke", "rgba(0,0,0,0.90)")
+            .attr("stroke-width", 2.6)
+            .attr("paint-order", "stroke")
+            .attr("stroke-linejoin", "round")
+            .attr("filter", "url(#labelShadow)")
+            .style("pointer-events", "none")
+            .text(labelText);
+        });
+      });
+
+      // Validación: cada mes suma 100 (normalizado)
+      // (se deja en consola para auditoría)
+      processedData.forEach(m => {
+        const sum = m.bands.reduce((s, b) => s + b.value, 0);
+        if (Math.abs(sum - 100) > 0.01) {
+          console.warn(`Mes ${m.mes}: suma normalizada = ${sum}`);
+        }
+        const sumDisplay = m.bands.reduce((s, b) => s + b.displayValue, 0);
+        if (sumDisplay !== 100 && m.bands.some(b => b.displayValue > 0)) {
+          console.warn(`Mes ${m.mes}: suma DISPLAY = ${sumDisplay}`);
+        }
+      });
+    }
+
+    let resizeTimeout;
+    function handleResize() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(draw, 50);
+    }
+
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(container);
+
+    window.addEventListener("load", draw);
+    window.addEventListener("resize", handleResize);
+    setTimeout(draw, 120);
+  </script>
 </body>
 </html>
