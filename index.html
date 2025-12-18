@@ -59,19 +59,8 @@
       flex-shrink: 0;
     }
 
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 10px;
-    }
-
-    .legend-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
 
     .tooltip {
       position: fixed;
@@ -145,14 +134,8 @@
     };
 
     const errorBox = document.getElementById('error-message');
-    function showError(msg) {
-      errorBox.style.display = 'block';
-      errorBox.textContent = msg;
-    }
-    function clearError() {
-      errorBox.style.display = 'none';
-      errorBox.textContent = '';
-    }
+    function showError(msg) { errorBox.style.display = 'block'; errorBox.textContent = msg; }
+    function clearError() { errorBox.style.display = 'none'; errorBox.textContent = ''; }
 
     function safeNumber(x) {
       const n = Number(x);
@@ -196,11 +179,7 @@
       return { data, brands, colors };
     }
 
-    /**
-     * Normaliza cada mes para que sume 100.
-     * Calcula display entero por marca que suma 100 (método mayor residuo).
-     * NO emite mensajes/avisos de normalización.
-     */
+    // Normaliza cada mes a 100 y crea display entero (suma 100). Sin avisos/console de normalización.
     function normalizeTo100(rawData, brands, tolerance = 0.0001) {
       const out = rawData.map(row => {
         const values = brands.map(b => ({ brand: b, raw: safeNumber(row[b]) }));
@@ -225,10 +204,7 @@
         floors.sort((a, b) => b.frac - a.frac);
 
         const displayMap = new Map();
-        floors.forEach((v, idx) => {
-          const add = idx < remainder ? 1 : 0;
-          displayMap.set(v.brand, v.floor + add);
-        });
+        floors.forEach((v, idx) => displayMap.set(v.brand, v.floor + (idx < remainder ? 1 : 0)));
 
         const normRow = { mes: row.mes };
         brands.forEach(b => {
@@ -275,9 +251,7 @@
     legendDiv.selectAll("*").remove();
     brands.forEach(brand => {
       const item = legendDiv.append("div").attr("class", "legend-item");
-      item.append("div")
-        .attr("class", "legend-color")
-        .style("background-color", colors[brand] || "#999");
+      item.append("div").attr("class", "legend-color").style("background-color", colors[brand] || "#999");
       item.append("span").text(brand);
     });
 
@@ -304,7 +278,11 @@
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "none");
 
-      // Defs: sombra negra para texto + borde negro (stroke)
+      // Grupo principal
+      const g = svgRoot.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Defs: sombra negra para texto
       const defs = svgRoot.append("defs");
       const filter = defs.append("filter")
         .attr("id", "labelShadow")
@@ -316,9 +294,6 @@
         .attr("flood-color", "#000")
         .attr("flood-opacity", 0.9);
 
-      const svg = svgRoot.append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
-
       const x = d3.scaleBand()
         .domain(chartData.map(d => d.mes))
         .range([0, innerWidth])
@@ -329,21 +304,21 @@
         .range([innerHeight, 0]);
 
       // Grid + ejes
-      svg.append("g")
+      g.append("g")
         .attr("class", "grid")
         .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat("").ticks(5))
         .style("opacity", 0.3);
 
-      svg.append("g")
+      g.append("g")
         .attr("class", "axis")
         .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x).tickSize(5));
 
-      svg.append("g")
+      g.append("g")
         .attr("class", "axis")
         .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5).tickSize(5));
 
-      // Bandas por mes
+      // Precalcular bandas por mes (snap último y1=100)
       const processedData = chartData.map(d => {
         const values = brands.map(brand => ({
           brand,
@@ -351,105 +326,107 @@
           displayValue: safeNumber(d[`__d_${brand}`])
         }));
 
-        // Orden por valor para banda (ribbon chart)
         values.sort((a, b) => a.value - b.value);
 
         let cumulative = 0;
         const bands = values.map(v => {
           const start = cumulative;
           cumulative += v.value;
-          return {
-            brand: v.brand,
-            value: v.value,
-            displayValue: v.displayValue,
-            y0: start,
-            y1: cumulative
-          };
+          return { brand: v.brand, value: v.value, displayValue: v.displayValue, y0: start, y1: cumulative };
         });
 
-        // Snap para evitar micro-grietas por float: último y1 = 100
         if (bands.length) {
           bands[0].y0 = 0;
           bands[bands.length - 1].y1 = 100;
-          for (let i = 0; i < bands.length; i++) {
-            bands[i].y0 = Math.max(0, Math.min(100, bands[i].y0));
-            bands[i].y1 = Math.max(0, Math.min(100, bands[i].y1));
-          }
         }
 
         return { mes: d.mes, bands };
       });
 
-      const barWidth = x.bandwidth();
-      const ribbonOpacity = 0.75;
-      const rectOpacity = 0.88;
+      // Layers
+      const ribbonsLayer = g.append("g");
+      const barsLayer = g.append("g");
+      const labelsLayer = g.append("g");
 
-      function onOver(sel) {
-        sel.attr("opacity", 1);
-        tooltip.style("opacity", 1);
-      }
-      function onOut(sel, baseOpacity) {
-        sel.attr("opacity", baseOpacity);
-        tooltip.style("opacity", 0);
+      const tooltipOn = (html) => { tooltip.style("opacity", 1).html(html); };
+      const tooltipMove = (event) => {
+        tooltip.style("left", (event.clientX + 10) + "px").style("top", (event.clientY - 10) + "px");
+      };
+      const tooltipOff = () => { tooltip.style("opacity", 0); };
+
+      const ribbonOpacity = 0.70;
+      const rectOpacity = 1.00; // CLAVE: elimina la “curva” por mezcla de transparencias
+      const rectStroke = "#FFFFFF"; // ayuda a “cortar” anti-aliasing
+      const rectStrokeW = 0.6;
+
+      // Helper: offset para que la cinta NO toque el borde de la columna
+      function gapInset(x0, x1, bw) {
+        const gap = Math.max(0, x1 - x0 - bw);
+        // inset dinámico: suficiente para separarla visualmente, sin romper cuando el gap es pequeño
+        return Math.max(0, Math.min(3, gap * 0.25));
       }
 
-      // 1) RIBBONS: solo conectores (sin bloque), dibujados por orden vertical (bottom -> top)
+      // 1) RIBBONS: solo en el gap (sin tocar columnas)
       for (let i = 0; i < processedData.length - 1; i++) {
-        const current = processedData[i];
-        const next = processedData[i + 1];
+        const cur = processedData[i];
+        const nxt = processedData[i + 1];
 
-        const x0 = x(current.mes);
-        const x1 = x(next.mes);
+        const x0 = x(cur.mes);
+        const x1 = x(nxt.mes);
         if (x0 == null || x1 == null) continue;
 
-        const gap = Math.max(0, x1 - x0 - barWidth);
-        const c1 = x0 + barWidth + gap / 2;
-        const c2 = x1 - gap / 2;
+        const bw = x.bandwidth();
 
+        const inset = gapInset(x0, x1, bw);
+        const startX = x0 + bw + inset;
+        const endX = x1 - inset;
+        if (endX <= startX) continue;
+
+        const span = endX - startX;
+        const c1 = startX + span / 2;
+        const c2 = endX - span / 2;
+
+        // Orden de pintado por altura media (bottom -> top) para consistencia visual
         const connectors = brands.map(brand => {
-          const cb = current.bands.find(b => b.brand === brand);
-          const nb = next.bands.find(b => b.brand === brand);
+          const cb = cur.bands.find(b => b.brand === brand);
+          const nb = nxt.bands.find(b => b.brand === brand);
           if (!cb || !nb) return null;
-          return {
-            brand,
-            cb, nb,
-            // criterio de orden: altura media del conector
-            mid: ((cb.y0 + cb.y1 + nb.y0 + nb.y1) / 4)
-          };
+          return { brand, cb, nb, mid: ((cb.y0 + cb.y1 + nb.y0 + nb.y1) / 4) };
         }).filter(Boolean).sort((a, b) => a.mid - b.mid);
 
-        connectors.forEach(item => {
-          const { brand, cb, nb } = item;
-
+        connectors.forEach(({ brand, cb, nb }) => {
           const path = `
-            M ${x0 + barWidth},${y(cb.y0)}
-            C ${c1},${y(cb.y0)} ${c2},${y(nb.y0)} ${x1},${y(nb.y0)}
-            L ${x1},${y(nb.y1)}
-            C ${c2},${y(nb.y1)} ${c1},${y(cb.y1)} ${x0 + barWidth},${y(cb.y1)}
+            M ${startX},${y(cb.y0)}
+            C ${c1},${y(cb.y0)} ${c2},${y(nb.y0)} ${endX},${y(nb.y0)}
+            L ${endX},${y(nb.y1)}
+            C ${c2},${y(nb.y1)} ${c1},${y(cb.y1)} ${startX},${y(cb.y1)}
             Z
           `;
 
-          svg.append("path")
+          ribbonsLayer.append("path")
             .attr("d", path)
             .attr("fill", colors[brand] || "#999")
             .attr("opacity", ribbonOpacity)
             .style("cursor", "pointer")
-            .on("mouseover", function() { onOver(d3.select(this)); })
-            .on("mousemove", function(event) {
-              tooltip
-                .html(`<strong>${brand}</strong><br/>${current.mes}: ${cb.displayValue}% → ${next.mes}: ${nb.displayValue}%`)
-                .style("left", (event.clientX + 10) + "px")
-                .style("top", (event.clientY - 10) + "px");
+            .on("mouseover", function(event) {
+              d3.select(this).attr("opacity", 1);
+              tooltipOn(`<strong>${brand}</strong><br/>${cur.mes}: ${cb.displayValue}% → ${nxt.mes}: ${nb.displayValue}%`);
+              tooltipMove(event);
             })
-            .on("mouseout", function() { onOut(d3.select(this), ribbonOpacity); });
+            .on("mousemove", function(event) { tooltipMove(event); })
+            .on("mouseout", function() {
+              d3.select(this).attr("opacity", ribbonOpacity);
+              tooltipOff();
+            });
         });
       }
 
-      // 2) RECTÁNGULOS + ETIQUETAS: por mes, ordenados bottom -> top (capas consistentes)
+      // 2) BARRAS (columnas) completamente opacas -> bordes rectos garantizados
       processedData.forEach(month => {
         const xPos = x(month.mes);
         if (xPos == null) return;
 
+        const bw = x.bandwidth();
         const bandsSorted = [...month.bands].sort((a, b) => a.y0 - b.y0);
 
         bandsSorted.forEach(band => {
@@ -457,36 +434,35 @@
           const yBottom = y(band.y0);
           const rectHeight = Math.max(0, yBottom - yTop);
 
-          svg.append("rect")
+          barsLayer.append("rect")
             .attr("x", xPos)
             .attr("y", yTop)
-            .attr("width", barWidth)
+            .attr("width", bw)
             .attr("height", rectHeight)
             .attr("fill", colors[band.brand] || "#999")
             .attr("opacity", rectOpacity)
+            .attr("stroke", rectStroke)
+            .attr("stroke-width", rectStrokeW)
             .style("cursor", "pointer")
-            .on("mouseover", function() { onOver(d3.select(this)); })
-            .on("mousemove", function(event) {
-              tooltip
-                .html(`<strong>${band.brand}</strong><br/>${month.mes}: ${band.displayValue}%`)
-                .style("left", (event.clientX + 10) + "px")
-                .style("top", (event.clientY - 10) + "px");
+            .on("mouseover", function(event) {
+              tooltipOn(`<strong>${band.brand}</strong><br/>${month.mes}: ${band.displayValue}%`);
+              tooltipMove(event);
             })
-            .on("mouseout", function() { onOut(d3.select(this), rectOpacity); });
+            .on("mousemove", function(event) { tooltipMove(event); })
+            .on("mouseout", function() { tooltipOff(); });
 
           // Etiqueta: NO mostrar si displayValue == 0
           if (band.displayValue <= 0) return;
 
-          const labelX = xPos + barWidth / 2;
+          const labelX = xPos + bw / 2;
           const labelY = yTop + rectHeight / 2;
 
-          // Ajuste de tamaño según altura (mantiene legibilidad)
           let fontSize = 11;
           if (rectHeight < 18) fontSize = 9;
           if (rectHeight < 12) fontSize = 8;
           if (rectHeight < 8)  fontSize = 7;
 
-          svg.append("text")
+          labelsLayer.append("text")
             .attr("x", labelX)
             .attr("y", labelY)
             .attr("text-anchor", "middle")
@@ -494,7 +470,6 @@
             .attr("font-weight", 800)
             .attr("font-size", fontSize + "px")
             .attr("fill", "#FFFFFF")
-            // borde negro + sombra negra para contraste en fondos claros
             .attr("stroke", "rgba(0,0,0,0.95)")
             .attr("stroke-width", 2.8)
             .attr("paint-order", "stroke")
